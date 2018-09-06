@@ -1,0 +1,30 @@
+from setuptools import setup
+
+setup(name="yt_p2p",
+      version="0.0.0",
+      description="Pop2Prime project analysis tools.",
+      author="Britton Smith",
+      author_email="brittonsmith@gmail.com",
+      license="BSD",
+      keywords=["simulation", "merger-tree", "astronomy", "astrophysics"],
+      url="https://github.com/brittonsmith/yt_p2p",
+      packages=["yt_p2p"],
+      include_package_data=True,
+      classifiers=[
+          "Development Status :: 1 - Planning",
+          "Environment :: Console",
+          "Intended Audience :: Science/Research",
+          "Topic :: Scientific/Engineering :: Astronomy",
+          "License :: OSI Approved :: BSD License",
+          "Operating System :: MacOS :: MacOS X",
+          "Operating System :: POSIX :: Linux",
+          "Operating System :: Unix",
+          "Natural Language :: English",
+          "Programming Language :: Python :: 3.5",
+          "Programming Language :: Python :: 3.6",
+      ],
+      install_requires=[
+          'numpy',
+          'yt>=3.4',
+      ],
+)

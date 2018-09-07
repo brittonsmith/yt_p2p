@@ -1,5 +1,5 @@
 """
-Pop2Prime project analysis tools.
+Pop2Prime fields.
 
 
 
@@ -13,5 +13,9 @@ Pop2Prime project analysis tools.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from yt_p2p.fields import \
-    add_p2p_fields
+def _metallicity3(field, data):
+    return data["enzo", "SN_Colour"] / data["gas", "density"]
+
+def add_p2p_fields(ds):
+    ds.add_field("metallicity3", function=_metallicity3,
+                 units="Zsun", sampling_type="cell")

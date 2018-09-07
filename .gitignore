@@ -1,0 +1,6 @@
+__pycache__/
+build
+yt_p2p.egg-info
+syntax: glob
+*~
+*.pyc

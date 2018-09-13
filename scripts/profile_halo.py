@@ -217,7 +217,7 @@ if __name__ == "__main__":
                     extrema={("index", "radius"): radius_range},
                     units={("index", "radius"): "pc"})
     hc.add_callback("save_object_as_dataset", "profiles_object",
-                    output_dir="velocity_phase", filename=my_field)
+                    output_dir="velocity_profiles", filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
     hc.add_callback("delete_attribute", "profiles_variance")
     hc.add_callback("delete_attribute", "profiles_object")

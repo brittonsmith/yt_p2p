@@ -101,9 +101,11 @@ def my_2d_radial_profile(hc, output_dir, my_field, field_range, field_units,
         extrema={("gas", my_field): field_range,
                  ("index", "radius"): radius_range},
         units={("gas", my_field): field_units, ("index", "radius"): "pc"})
-    hc.add_callback("save_object_as_dataset", "profiles",
+    hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir=output_dir, filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
+    hc.add_callback("delete_attribute", "profiles_variance")
+    hc.add_callback("delete_attribute", "profiles_object")
 add_recipe("my_2d_radial_profile", my_2d_radial_profile)
 
 def my_2d_density_profile(hc, output_dir, my_field, field_range,
@@ -123,9 +125,11 @@ def my_2d_density_profile(hc, output_dir, my_field, field_range,
         weight_field=None, n_bins=(128, n_ybins),
         extrema={("gas", "number_density"): number_density_range,
                  ("gas", my_field): field_range})
-    hc.add_callback("save_object_as_dataset", "profiles",
+    hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir=output_dir, filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
+    hc.add_callback("delete_attribute", "profiles_variance")
+    hc.add_callback("delete_attribute", "profiles_object")
 add_recipe("my_2d_density_profile", my_2d_density_profile)
 
 if __name__ == "__main__":
@@ -171,9 +175,11 @@ if __name__ == "__main__":
          ("gas", "density"),
          ("gas", "temperature")],
         weight_field="cell_mass", n_bins=128)
-    hc.add_callback("save_profiles", output_dir="profiles",
-                    filename="profiles")
+    hc.add_callback("save_object_as_dataset", "profiles_object",
+                    output_dir="profiles", filename="profiles")
     hc.add_callback("delete_attribute", "profiles")
+    hc.add_callback("delete_attribute", "profiles_variance")
+    hc.add_callback("delete_attribute", "profiles_object")
 
     # 2D density profiles
     nprofs = [("H2_fraction", [1e-10, 1.]),
@@ -210,9 +216,11 @@ if __name__ == "__main__":
                     logs={("index", "radius"): True},
                     extrema={("index", "radius"): radius_range},
                     units={("index", "radius"): "pc"})
-    hc.add_callback("save_object_as_dataset", "profiles",
+    hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir="velocity_phase", filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
+    hc.add_callback("delete_attribute", "profiles_variance")
+    hc.add_callback("delete_attribute", "profiles_object")
     vprofs = [("velocity_magnitude",            [0, 15]),
               ("velocity_spherical_radius",     [-5, 5]),
               ("velocity_spherical_theta",      [-5, 5]),

@@ -18,8 +18,7 @@ from yt.extensions.astro_analysis.halo_analysis.api import \
 
 from yt.extensions.p2p import \
     add_p2p_fields
-from yt.extensions.p2p.halo_catalog_callbacks import \
-    sphere_projection
+import yt.extensions.p2p.halo_catalog_callbacks
 
 def _max_gas_density(halo):
     return halo.data_object["gas", "density"].max()

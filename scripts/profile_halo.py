@@ -97,7 +97,7 @@ def my_2d_radial_profile(hc, output_dir, my_field, field_range, field_units,
     hc.add_callback(
         "profile", [("index", "radius"), ("gas", my_field)],
         ["cell_mass"], weight_field=None, n_bins=(128, n_ybins),
-        logs={("gas", my_field): False, ("index", "radius"): True},
+        logs={("gas", my_field): log, ("index", "radius"): True},
         extrema={("gas", my_field): field_range,
                  ("index", "radius"): radius_range},
         units={("gas", my_field): field_units, ("index", "radius"): "pc"})

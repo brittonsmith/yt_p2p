@@ -13,8 +13,12 @@ Pop2Prime plotting functions.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
+from matplotlib import ticker
 import numpy as np
 import yt
+
+from yt.units.yt_array import \
+    YTArray
 
 def plot_profile_distribution(
         my_axes, filename, field,
@@ -59,7 +63,7 @@ def plot_profile_distribution(
                 linewidth=0, alpha=my_alpha, **pkwargs)
 
 def plot_profile_distribution_legend(
-        my_axes, items, step=1,
+        my_axes, items, step=1, label_rotation=0,
         fontsize=12, lfontsize=8, alpha_scale=1.0,
         lwidth=0.1, lheight=0.2):
 
@@ -109,7 +113,8 @@ def plot_profile_distribution_legend(
 
     lax.xaxis.tick_bottom()
     lax.xaxis.set_ticks(np.arange(len(items)))
-    lax.xaxis.set_ticklabels([item[1] for item in items], rotation=315)
+    lax.xaxis.set_ticklabels([item[1] for item in items],
+                             rotation=label_rotation)
     for tick in lax.xaxis.get_ticklines():
         tick.set_visible(False)
     for tl in lax.xaxis.get_majorticklabels():
@@ -119,3 +124,64 @@ def plot_profile_distribution_legend(
         tl.set_fontsize(fontsize)
     for tl in lax.yaxis.get_majorticklabels():
         tl.set_fontsize(lfontsize)
+
+def get10s(lim):
+    bds = np.ceil(np.log10(lim))
+    return np.logspace(bds[0], bds[1], bds[1]-bds[0]+1)
+
+def draw_major_grid(my_axes, axis, ticks, **pkwargs):
+    my_axis = getattr(my_axes, "%saxis" % axis)
+    for tick in ticks:
+        if axis == 'x':
+            my_axes.axvline(x=tick, zorder=1, **pkwargs)
+        elif axis == 'y':
+            my_axes.axhline(y=tick, zorder=1, **pkwargs)
+        else:
+            raise RuntimeError("Axis must be x or y.")
+
+def twin_unit_axes(
+        my_axes, xlim, xlabel,
+        bottom_units, top_units=None,
+        bottom_grid=True, top_grid=True):
+
+    my_axes.set_xlim(xlim)
+    my_axes.xaxis.labelpad = 2
+    my_axes.xaxis.set_label_text(
+        "%s [%s]" % (xlabel, bottom_units))
+    if bottom_grid:
+        draw_major_grid(my_axes, 'x', get10s(xlim),
+                        color='black', linestyle='-',
+                        linewidth=1, alpha=0.2)
+
+    if top_units is not None:
+        tx = my_axes.twiny()
+        tx.set_xscale('log')
+        tx.xaxis.tick_top()
+        txlim = YTArray(xlim, bottom_units).to(top_units)
+        tx.set_xlim(tuple(txlim))
+        tx.xaxis.set_label_text(
+            "%s [%s]" % (xlabel, top_units))
+        tx.xaxis.labelpad = 8
+        if top_grid:
+            draw_major_grid(tx, 'x', get10s(txlim),
+                            color='black', linestyle=':',
+                            linewidth=1, alpha=0.2)
+        return tx
+
+def mirror_yticks(my_axes, ylim, ymajor, yminor=None):
+    my_axes.yaxis.set_ticks(ymajor)
+    my_axes.yaxis.set_ticks(yminor, minor=True)
+    my_axes.yaxis.set_minor_formatter(ticker.NullFormatter())
+    my_axes.set_ylim(ylim)
+
+    ty = my_axes.twinx()
+    ty.yaxis.tick_right()
+    ty.yaxis.set_tick_params(direction='in', which='both')
+    ty.yaxis.set_ticks(ymajor)
+    if yminor is not None:
+        ty.yaxis.set_ticks(yminor, minor=True)
+        ty.yaxis.set_minor_formatter(ticker.NullFormatter())
+    ty.set_ylim(ylim)
+    for ticklabel in ty.yaxis.get_majorticklabels():
+        ticklabel.set_visible(False)
+    return ty

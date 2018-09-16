@@ -175,6 +175,7 @@ def mirror_yticks(my_axes, ylim, ymajor, yminor=None):
     my_axes.set_ylim(ylim)
 
     ty = my_axes.twinx()
+    ty.set_yscale(my_axes.get_yscale())
     ty.yaxis.tick_right()
     ty.yaxis.set_tick_params(direction='in', which='both')
     ty.yaxis.set_ticks(ymajor)

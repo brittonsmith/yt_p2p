@@ -18,7 +18,7 @@ from yt.extensions.p2p.plots import \
 
 from grid_figure import GridFigure
 
-if __name__ == "__main__":
+def plot_velocity_profiles(data_dir, halo_id):
     fontsize = 14
     my_fig = GridFigure(
         1, 1, figsize=(6, 4.5),
@@ -31,8 +31,6 @@ if __name__ == "__main__":
 
     my_axes = my_fig[0]
     my_axes.set_xscale('log')
-    data_dir = "../halo_catalogs/profile_catalogs/DD0560/velocity_profiles"
-    halo_id = 41732
 
     fields = ["velocity_magnitude",
               "tangential_velocity_magnitude",
@@ -46,8 +44,9 @@ if __name__ == "__main__":
             x_units="pc", y_units="km/s", alpha_scale=0.7,
             pkwargs=dict(color=colors[i], linewidth=1))
 
+    profile_dir = os.path.join(os.path.dirname(data_dir), "profiles")
     pds = yt.load(
-        "../halo_catalogs/profile_catalogs/DD0560/profiles/profiles_%06d.h5" % halo_id)
+        os.path.join(profile_dir, "profiles_%06d.h5" % halo_id))
     pradius = pds.profile.x.to("pc")
     vsigma = pds.profile.standard_deviation['data', 'velocity_magnitude'].to("km/s")
     my_axes.plot(pradius[vsigma > 0], vsigma[vsigma > 0], alpha=0.9,
@@ -85,3 +84,8 @@ if __name__ == "__main__":
         my_axes, plot_items, alpha_scale=0.7)
 
     pyplot.savefig("velocity_profiles.pdf")
+
+if __name__ == "__main__":
+    data_dir = "../halo_catalogs/profile_catalogs/DD0560/velocity_profiles"
+    halo_id = 41732
+    plot_velocity_profiles(data_dir, halo_id)

@@ -19,7 +19,7 @@ from yt.extensions.p2p.plots import \
 
 from grid_figure import GridFigure
 
-if __name__ == "__main__":
+def plot_timescale_profiles(data_dir, halo_id):
     my_fig = GridFigure(
         [3, 1], 1, figsize=(6, 4.5),
         top_buffer = 0.13, bottom_buffer = 0.12,
@@ -29,9 +29,6 @@ if __name__ == "__main__":
     fontsize = 12
 
     colors = ["red", "green", "blue"]
-
-    data_dir = "../halo_catalogs/profile_catalogs/DD0560/timescale_profiles"
-    halo_id = 41732
 
     for i, my_axes in enumerate(my_fig):
         my_axes.set_xscale('log')
@@ -105,3 +102,8 @@ if __name__ == "__main__":
             my_axes.yaxis.labelpad = 0
 
     pyplot.savefig("timescale_profiles.pdf")
+
+if __name__ == "__main__":
+    data_dir = "../halo_catalogs/profile_catalogs/DD0560/timescale_profiles"
+    halo_id = 41732
+    plot_timescale_profiles(data_dir, halo_id)

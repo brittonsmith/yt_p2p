@@ -101,7 +101,7 @@ def plot_timescale_profiles(data_dir, halo_id):
             my_axes.yaxis.set_label_text("t / t$_{\\rm ff}$")
             my_axes.yaxis.labelpad = 0
 
-    pyplot.savefig("timescale_profiles.pdf")
+    pyplot.savefig("figures/timescale_profiles.pdf")
 
 if __name__ == "__main__":
     data_dir = "../halo_catalogs/profile_catalogs/DD0560/timescale_profiles"

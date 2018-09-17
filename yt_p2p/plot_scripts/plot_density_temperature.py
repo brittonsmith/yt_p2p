@@ -50,7 +50,7 @@ def plot_density_temperature(data_dir, halo_id):
     draw_major_grid(my_axes, 'y', ymajor)
     my_axes.yaxis.set_label_text("T [K]")
 
-    pyplot.savefig("density_temperature.pdf")
+    pyplot.savefig("figures/density_temperature.pdf")
 
 if __name__ == "__main__":
     data_dir = "../halo_catalogs/profile_catalogs/DD0560/density_profiles"

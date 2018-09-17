@@ -147,8 +147,8 @@ def plot_phase(filename, field, units,
 
     c_max = np.floor(np.log10(my_max))
     c_min = np.ceil(np.log10(my_min))
-    c_step = np.ceil((c_max - c_min) / 6)
-    c_ticks = 10**np.arange(c_min, c_max, c_step)
+    c_step = np.ceil((c_max - c_min + 1) / 6)
+    c_ticks = 10**np.arange(c_min, c_max+1, c_step)
     my_norm = colors.LogNorm(my_min, my_max)
 
     my_image = my_axes.pcolormesh(x_data, y_data, z_data.T,

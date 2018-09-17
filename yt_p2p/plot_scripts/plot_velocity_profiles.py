@@ -83,7 +83,7 @@ def plot_velocity_profiles(data_dir, halo_id):
     plot_profile_distribution_legend(
         my_axes, plot_items, alpha_scale=0.7)
 
-    pyplot.savefig("velocity_profiles.pdf")
+    pyplot.savefig("figures/velocity_profiles.pdf")
 
 if __name__ == "__main__":
     data_dir = "../halo_catalogs/profile_catalogs/DD0560/velocity_profiles"

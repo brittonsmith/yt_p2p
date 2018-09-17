@@ -104,4 +104,4 @@ if __name__ == "__main__":
             my_axes.yaxis.set_label_text("t / t$_{\\rm ff}$")
             my_axes.yaxis.labelpad = 0
 
-    pyplot.savefig("timescales.pdf")
+    pyplot.savefig("timescale_profiles.pdf")

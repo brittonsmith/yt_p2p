@@ -84,4 +84,4 @@ if __name__ == "__main__":
     plot_profile_distribution_legend(
         my_axes, plot_items, alpha_scale=0.7)
 
-    pyplot.savefig("velocities.pdf")
+    pyplot.savefig("velocity_profiles.pdf")

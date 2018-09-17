@@ -13,12 +13,17 @@ Pop2Prime plotting functions.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
-from matplotlib import ticker
+from matplotlib import \
+    pyplot, \
+    colors, \
+    ticker
 import numpy as np
 import yt
 
 from yt.units.yt_array import \
     YTArray
+from yt.visualization.color_maps import \
+    yt_colormaps
 
 def plot_profile_distribution(
         my_axes, filename, field,
@@ -125,11 +130,42 @@ def plot_profile_distribution_legend(
     for tl in lax.yaxis.get_majorticklabels():
         tl.set_fontsize(lfontsize)
 
+def plot_phase(filename, field, units,
+               my_axes, cmap=None, my_cax=None):
+
+    ds = yt.load(filename)
+    x_data = ds.profile.x
+    y_data = ds.profile.y
+    z_data = ds.profile[field].to(units)
+
+    if cmap is None:
+        cmap = yt_colormaps['dusk']
+
+    nz = z_data > 0
+    my_min = z_data[nz].min()
+    my_max = z_data[nz].max()
+
+    c_max = np.floor(np.log10(my_max))
+    c_min = np.ceil(np.log10(my_min))
+    c_step = np.ceil((c_max - c_min) / 6)
+    c_ticks = 10**np.arange(c_min, c_max, c_step)
+    my_norm = colors.LogNorm(my_min, my_max)
+
+    my_image = my_axes.pcolormesh(x_data, y_data, z_data.T,
+                                  norm=my_norm, cmap=cmap,
+                                  zorder=9999)
+    cbar = pyplot.colorbar(my_image, orientation="vertical",
+                           cax=my_cax, ticks=c_ticks)
+
 def get10s(lim):
     bds = np.ceil(np.log10(lim))
     return np.logspace(bds[0], bds[1], bds[1]-bds[0]+1)
 
 def draw_major_grid(my_axes, axis, ticks, **pkwargs):
+    if not pkwargs:
+        pkwargs = dict(color='black', linestyle='-',
+                       linewidth=1, alpha=0.2)
+
     my_axis = getattr(my_axes, "%saxis" % axis)
     for tick in ticks:
         if axis == 'x':
@@ -168,10 +204,31 @@ def twin_unit_axes(
                             linewidth=1, alpha=0.2)
         return tx
 
+def mirror_xticks(my_axes, xlim, xmajor, xminor=None):
+    my_axes.xaxis.set_ticks(xmajor)
+    if xminor is not None:
+        my_axes.xaxis.set_ticks(xminor, minor=True)
+        my_axes.xaxis.set_minor_formatter(ticker.NullFormatter())
+    my_axes.set_xlim(xlim)
+
+    tx = my_axes.twiny()
+    tx.set_xscale(my_axes.get_xscale())
+    tx.xaxis.tick_top()
+    tx.xaxis.set_tick_params(direction='in', which='both')
+    tx.xaxis.set_ticks(xmajor)
+    if xminor is not None:
+        tx.xaxis.set_ticks(xminor, minor=True)
+        tx.xaxis.set_minor_formatter(ticker.NullFormatter())
+    tx.set_xlim(xlim)
+    for ticklabel in tx.xaxis.get_majorticklabels():
+        ticklabel.set_visible(False)
+    return tx
+
 def mirror_yticks(my_axes, ylim, ymajor, yminor=None):
     my_axes.yaxis.set_ticks(ymajor)
-    my_axes.yaxis.set_ticks(yminor, minor=True)
-    my_axes.yaxis.set_minor_formatter(ticker.NullFormatter())
+    if yminor is not None:
+        my_axes.yaxis.set_ticks(yminor, minor=True)
+        my_axes.yaxis.set_minor_formatter(ticker.NullFormatter())
     my_axes.set_ylim(ylim)
 
     ty = my_axes.twinx()

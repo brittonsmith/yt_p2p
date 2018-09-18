@@ -154,6 +154,7 @@ def plot_phase(filename, field, units,
     my_image = my_axes.pcolormesh(x_data, y_data, z_data.T,
                                   norm=my_norm, cmap=cmap,
                                   zorder=9999)
+    my_image.set_edgecolor("face")
     cbar = pyplot.colorbar(my_image, orientation="vertical",
                            cax=my_cax, ticks=c_ticks)
 

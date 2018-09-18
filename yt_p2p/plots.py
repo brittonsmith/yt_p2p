@@ -180,6 +180,7 @@ def twin_unit_axes(
         bottom_units, top_units=None,
         bottom_grid=True, top_grid=True):
 
+    my_axes.xaxis.set_ticks(get10s(xlim))
     my_axes.set_xlim(xlim)
     my_axes.xaxis.labelpad = 2
     my_axes.xaxis.set_label_text(
@@ -194,6 +195,7 @@ def twin_unit_axes(
         tx.set_xscale('log')
         tx.xaxis.tick_top()
         txlim = YTArray(xlim, bottom_units).to(top_units)
+        tx.xaxis.set_ticks(get10s(txlim))
         tx.set_xlim(tuple(txlim))
         tx.xaxis.set_label_text(
             "%s [%s]" % (xlabel, top_units))

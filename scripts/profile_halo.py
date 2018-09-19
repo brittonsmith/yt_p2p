@@ -83,23 +83,12 @@ def iterative_center_of_mass(halo, inner_radius,
     yt.mylog.info("     New center: %s." % new_center.to("unitary"))
 add_callback("iterative_center_of_mass", iterative_center_of_mass)
 
-def my_2d_radial_profile(hc, output_dir, my_field, field_range, field_units,
-                  log=True):
-    radius_range = [1e-7, 3e2]
-    bins_per_dex = 10
-    if log:
-        n_ybins = int(np.log10(field_range[1] /
-                               field_range[0]) * bins_per_dex)
-    else:
-        n_ybins = int((field_range[1] -
-                       field_range[0]) * bins_per_dex)
-
+def my_2d_radial_profile(hc, output_dir, my_field, field_units,
+                         log=True):
     hc.add_callback(
         "profile", [("index", "radius"), ("gas", my_field)],
-        ["cell_mass"], weight_field=None, n_bins=(128, n_ybins),
+        ["cell_mass"], weight_field=None, bin_density=20,
         logs={("gas", my_field): log, ("index", "radius"): True},
-        extrema={("gas", my_field): field_range,
-                 ("index", "radius"): radius_range},
         units={("gas", my_field): field_units, ("index", "radius"): "pc"})
     hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir=output_dir, filename=my_field)
@@ -108,23 +97,12 @@ def my_2d_radial_profile(hc, output_dir, my_field, field_range, field_units,
     hc.add_callback("delete_attribute", "profiles_object")
 add_recipe("my_2d_radial_profile", my_2d_radial_profile)
 
-def my_2d_density_profile(hc, output_dir, my_field, field_range,
+def my_2d_density_profile(hc, output_dir, my_field,
                           log=True):
-    number_density_range = [1e-5, 1e14]
-    bins_per_dex = 10
-    if log:
-        n_ybins = int(np.log10(field_range[1] /
-                               field_range[0]) * bins_per_dex)
-    else:
-        n_ybins = int((field_range[1] -
-                       field_range[0]) * bins_per_dex)
-
     hc.add_callback(
         "profile", [("gas", "number_density"),
                     ("gas", my_field)], ["cell_mass"],
-        weight_field=None, n_bins=(128, n_ybins),
-        extrema={("gas", "number_density"): number_density_range,
-                 ("gas", my_field): field_range})
+        weight_field=None, bin_density=20)
     hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir=output_dir, filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
@@ -174,7 +152,8 @@ if __name__ == "__main__":
          ("gas", "cooling_time"),
          ("gas", "density"),
          ("gas", "temperature")],
-        weight_field="cell_mass", n_bins=128)
+        units={("index", "radius"): "pc"},
+        weight_field="cell_mass", bin_density=20)
     hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir="profiles", filename="profiles")
     hc.add_callback("delete_attribute", "profiles")
@@ -182,53 +161,51 @@ if __name__ == "__main__":
     hc.add_callback("delete_attribute", "profiles_object")
 
     # 2D density profiles
-    nprofs = [("H2_fraction", [1e-10, 1.]),
-              ("HD_fraction", [1e-15, 1e-3]),
-              ("HD_H2_ratio", [1e-7, 1e-4]),
-              ("temperature", [1, 1e5])]
-    for my_field, field_range in nprofs:
+    nprofs = ["H2_fraction",
+              "HD_fraction",
+              "HD_H2_ratio",
+              "temperature"]
+    for my_field in nprofs:
         hc.add_recipe("my_2d_density_profile", "density_profiles",
-                      my_field, field_range)
+                      my_field)
 
     # 2D radial profiles
-    rprofs = [("density", [1e-25, 1e-10], 'g/cm**3'),
-              ("metallicity3_min7", [1e-8, 1], 'Zsun')]
-    for my_field, field_range, field_units in rprofs:
+    rprofs = [("density", 'g/cm**3'),
+              ("metallicity3_min7", 'Zsun')]
+    for my_field, field_units in rprofs:
         hc.add_recipe("my_2d_radial_profile", "radial_profiles",
-                      my_field, field_range, field_units)
+                      my_field, field_units)
 
     # 2D radial/timescale profiles
-    tprofs = [("vortical_dynamical_ratio", [1e-4, 1e8], ""),
-              ("vortical_cooling_ratio",   [1e-4, 1e8], ""),
-              ("cooling_dynamical_ratio",  [1e-4, 1e8], ""),
-              ("vortical_time",  [1e-2, 1e15], "yr"),
-              ("dynamical_time", [1e-2, 1e15], "yr"),
-              ("cooling_time",   [1e-2, 1e15], "yr")]
-    for my_field, field_range, field_units in tprofs:
+    tprofs = [("vortical_dynamical_ratio", ""),
+              ("vortical_cooling_ratio",   ""),
+              ("cooling_dynamical_ratio",  ""),
+              ("vortical_time", "yr"),
+              ("dynamical_time","yr"),
+              ("cooling_time",  "yr")]
+    for my_field, field_units in tprofs:
         hc.add_recipe("my_2d_radial_profile", "timescale_profiles",
-                      my_field, field_range, field_units)
+                      my_field, field_units)
 
     # 2D radial/velocity profiles
-    radius_range = [1e-7, 3e2]
     my_field = "cell_mass"
     hc.add_callback("profile", [("index", "radius")], [("gas", my_field)],
-                    weight_field=None, n_bins=128,
+                    weight_field=None, bin_density=20,
                     logs={("index", "radius"): True},
-                    extrema={("index", "radius"): radius_range},
                     units={("index", "radius"): "pc"})
     hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir="velocity_profiles", filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
     hc.add_callback("delete_attribute", "profiles_variance")
     hc.add_callback("delete_attribute", "profiles_object")
-    vprofs = [("velocity_magnitude",            [0, 15]),
-              ("velocity_spherical_radius",     [-5, 5]),
-              ("velocity_spherical_theta",      [-5, 5]),
-              ("velocity_spherical_phi",        [-5, 5]),
-              ("tangential_velocity_magnitude", [0, 10]),
-              ("sound_speed",                   [0, 10])]
-    for my_field, field_range in vprofs:
+    vprofs = ["velocity_magnitude",
+              "velocity_spherical_radius",
+              "velocity_spherical_theta",
+              "velocity_spherical_phi",
+              "tangential_velocity_magnitude",
+              "sound_speed"]
+    for my_field in vprofs:
         hc.add_recipe("my_2d_radial_profile", "velocity_profiles",
-                      my_field, field_range, 'km/s', log=False)
+                      my_field, 'km/s', log=False)
 
     hc.create()

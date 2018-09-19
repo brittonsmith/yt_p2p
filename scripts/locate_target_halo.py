@@ -38,7 +38,7 @@ if __name__ == "__main__":
 
     hc = HaloCatalog(halos_ds=hds, data_ds=dds,
                      data_source=cr,
-                     output_dir="halo_catalogs/location_catalogs_new/%s" % dds.basename)
+                     output_dir="halo_catalogs/location_catalogs/%s" % dds.basename)
     hc.add_callback("sphere", factor=1.)
     hc.add_quantity("max_gas_density")
     hc.add_filter("quantity_value", "max_gas_density", ">", 1e-16, "g/cm**3")

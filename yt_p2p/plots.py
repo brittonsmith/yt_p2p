@@ -46,10 +46,8 @@ def plot_profile_distribution(
     z_data = ds.profile[field].transpose()
     z_sum = z_data.sum(axis=0)
     rfil = z_sum > 0
-    gmin = np.where(~rfil)[0].max() + 1
-
-    z_data = z_data[:, gmin:]
-    x_data = x_data[gmin:]
+    x_data = x_data[rfil]
+    z_data = z_data[:, rfil]
 
     z_sort = z_data.cumsum(axis=0) / z_data.sum(axis=0)
     y_med = y_data[np.abs(z_sort - 0.5).argmin(axis=0)]
@@ -154,7 +152,7 @@ def plot_phase(filename, field, units,
     my_image = my_axes.pcolormesh(x_data, y_data, z_data.T,
                                   norm=my_norm, cmap=cmap,
                                   zorder=9999)
-    my_image.set_edgecolor("face")
+    # my_image.set_edgecolor("face")
     cbar = pyplot.colorbar(my_image, orientation="vertical",
                            cax=my_cax, ticks=c_ticks)
 

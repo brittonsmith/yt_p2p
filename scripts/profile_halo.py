@@ -126,7 +126,31 @@ if __name__ == "__main__":
     my_radius = dds.quan(1.0, "pc")
     # hc.add_callback("iterative_center_of_mass", my_radius)
     hc.add_callback("field_max_center", "density")
+
+    # calculate virial mass
+    hc.add_recipe("calculate_virial_quantities",
+                  [('index', 'radius'),
+                   ('gas', 'cell_mass'),
+                   ('gas', 'dark_matter_mass'),
+                   ('gas', 'matter_mass')])
+
     hc.add_callback("sphere")
+
+    # 1D mass-weighted radial profiles
+    hc.add_callback(
+        "profile", ("index", "radius"),
+        [('index', 'radius'),
+         ('gas', 'cell_mass'),
+         ('gas', 'dark_matter_mass'),
+         ('gas', 'matter_mass')],
+        units={("index", "radius"): "pc"},
+        accumulation=True,
+        weight_field=None, bin_density=20)
+    hc.add_callback("save_object_as_dataset", "profiles_object",
+                    output_dir="profiles", filename="virial_profiles")
+    hc.add_callback("delete_attribute", "profiles")
+    hc.add_callback("delete_attribute", "profiles_variance")
+    hc.add_callback("delete_attribute", "profiles_object")
 
     # hc.add_callback("set_inner_bulk_velocity", my_radius)
     hc.add_callback("set_field_max_bulk_velocity", "density")

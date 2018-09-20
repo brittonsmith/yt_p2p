@@ -13,6 +13,9 @@ Pop2Prime plotting functions.
 # The full license is in the file COPYING.txt, distributed with this software.
 #-----------------------------------------------------------------------------
 
+import matplotlib as mpl
+mpl.rcParams['axes.unicode_minus'] = False
+
 from matplotlib import \
     pyplot, \
     colors, \
@@ -244,3 +247,31 @@ def mirror_yticks(my_axes, ylim, ymajor, yminor=None):
     for ticklabel in ty.yaxis.get_majorticklabels():
         ticklabel.set_visible(False)
     return ty
+
+def make_phase_plot(
+        my_fig, my_axes, filename,
+        field, units, cmap, clabel,
+        xlim, xmajor, xminor, xscale, xlabel,
+        ylim, ymajor, yminor, yscale, ylabel,
+        output_filename):
+
+    my_axes.set_xscale(xscale)
+    my_axes.set_yscale(yscale)
+
+    my_cax = my_fig.add_cax(my_axes, "right", buffer=0.02,
+                            length=0.95, width=0.04)
+    plot_phase(filename, field, units,
+               my_axes, my_cax=my_cax,
+               cmap=cmap)
+
+    my_cax.yaxis.set_label_text(clabel)
+
+    mirror_xticks(my_axes, xlim, xmajor, xminor=xminor)
+    draw_major_grid(my_axes, 'x', xmajor)
+    my_axes.xaxis.set_label_text(xlabel)
+
+    mirror_yticks(my_axes, ylim, ymajor, yminor=yminor)
+    draw_major_grid(my_axes, 'y', ymajor)
+    my_axes.yaxis.set_label_text(ylabel)
+
+    pyplot.savefig(output_filename)

@@ -7,7 +7,12 @@ create a series of images as we zoom in on the center of mass
 from the halo scale down to the collapsed object.
 
 For each simulation, the target halo was:
-cc_512_no_dust_continue DD0560 41732
+
+cc_512_collapse_solar_dust    DD0182  87497
+cc_512_collapse_solar_no_dust DD0185  66768
+cc_512_no_dust_continue       DD0560  41732
+cc_512_no_dust_continue_2     DD0532 161449
+cc_512_continue_collapse_dust DD0564  50010
 """
 import numpy as np
 import os

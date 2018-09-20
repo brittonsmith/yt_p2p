@@ -26,8 +26,6 @@ def plot_timescale_profiles(data_dir, halo_id):
         left_buffer = 0.14, right_buffer = 0.02,
         horizontal_buffer = 0.05, vertical_buffer = 0)
 
-    fontsize = 12
-
     colors = ["red", "green", "blue"]
 
     for i, my_axes in enumerate(my_fig):
@@ -85,8 +83,7 @@ def plot_timescale_profiles(data_dir, halo_id):
             z_data = ds.profile['cell_mass'].transpose()
             z_sum = z_data.sum(axis=0)
             rfil = z_sum > 0
-            gmin = np.where(~rfil)[0].max() + 1
-            my_axes.plot(x_data[gmin:], np.ones(x_data[gmin:].size),
+            my_axes.plot(x_data[rfil], np.ones(x_data[rfil].size),
                          alpha=0.9, color=colors[0], linewidth=1, zorder=1)
 
             tx.xaxis.set_visible(False)

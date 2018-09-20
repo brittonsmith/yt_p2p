@@ -19,7 +19,6 @@ from yt.extensions.p2p.plots import \
 from grid_figure import GridFigure
 
 def plot_velocity_profiles(data_dir, halo_id):
-    fontsize = 14
     my_fig = GridFigure(
         1, 1, figsize=(6, 4.5),
         top_buffer = 0.14, bottom_buffer = 0.12,

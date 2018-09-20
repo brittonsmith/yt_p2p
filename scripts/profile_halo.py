@@ -120,7 +120,16 @@ if __name__ == "__main__":
         halos_ds=hds, data_ds=dds,
         output_dir="halo_catalogs/profile_catalogs/%s" % dds.basename)
 
+    # cc_512_collapse_solar_dust
+    # hc.add_filter("quantity_value", "particle_identifier", "==", 87497, "")
+    # cc_512_collapse_solar_no_dust
+    # hc.add_filter("quantity_value", "particle_identifier", "==", 66768, "")
+    # cc_512_no_dust_continue
     hc.add_filter("quantity_value", "particle_identifier", "==", 41732, "")
+    # cc_512_no_dust_continue_2
+    # hc.add_filter("quantity_value", "particle_identifier", "==", 161449, "")
+    # cc_512_continue_collapse_dust
+    # hc.add_filter("quantity_value", "particle_identifier", "==", 50010, "")
 
     # my_radius = dds.quan(100.0, "AU")
     my_radius = dds.quan(1.0, "pc")

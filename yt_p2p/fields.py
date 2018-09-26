@@ -51,6 +51,8 @@ def _cooling_dynamical_ratio(field, data):
     return data["gas", "cooling_time"] / data["gas", "dynamical_time"]
 
 def add_p2p_fields(ds):
+    # use the value of solar metallicity in the dataset
+    ds.unit_registry.modify('Zsun', ds.parameters['SolarMetalFractionByMass'])
     ds.add_field("metallicity3",
                  function=_metallicity3,
                  units="Zsun", sampling_type="cell")

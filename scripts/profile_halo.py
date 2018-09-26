@@ -115,26 +115,17 @@ def my_2d_density_profile(hc, output_dir, my_field,
     hc.add_callback("delete_attribute", "profiles_object")
 add_recipe("my_2d_density_profile", my_2d_density_profile)
 
-if __name__ == "__main__":
-    dds = yt.load(sys.argv[1])
+def run_halo_catalog(ddsfn, hdsfn, halo_id):
+    dds = yt.load(ddsfn)
     add_p2p_fields(dds)
 
-    hds = yt.load(sys.argv[2])
+    hds = yt.load(hdsfn)
 
     hc = HaloCatalog(
         halos_ds=hds, data_ds=dds,
         output_dir="halo_catalogs/profile_catalogs/%s" % dds.basename)
 
-    # cc_512_collapse_solar_dust
-    # hc.add_filter("quantity_value", "particle_identifier", "==", 87497, "")
-    # cc_512_collapse_solar_no_dust
-    # hc.add_filter("quantity_value", "particle_identifier", "==", 66768, "")
-    # cc_512_no_dust_continue
-    hc.add_filter("quantity_value", "particle_identifier", "==", 41732, "")
-    # cc_512_no_dust_continue_2
-    # hc.add_filter("quantity_value", "particle_identifier", "==", 161449, "")
-    # cc_512_continue_collapse_dust
-    # hc.add_filter("quantity_value", "particle_identifier", "==", 50010, "")
+    hc.add_filter("quantity_value", "particle_identifier", "==", halo_id, "")
 
     # my_radius = dds.quan(100.0, "AU")
     my_radius = dds.quan(1.0, "pc")
@@ -247,3 +238,30 @@ if __name__ == "__main__":
                       my_field, 'km/s', log=False)
 
     hc.create()
+
+if __name__ == "__main__":
+    ddsfn = sys.argv[1]
+    hdsfn = sys.argv[2]
+
+    datasets = {
+        'cc_512_collapse_solar_dust':    {'DD0182':  87497},
+        'cc_512_collapse_solar_no_dust': {'DD0185':  66768},
+        'cc_512_no_dust_continue':       {'DD0560':  41732},
+        'cc_512_no_dust_continue_2':     {'DD0532':  161449},
+        'cc_512_continue_collapse_dust': {'DD0564':   50010}}
+
+    if len(sys.argv) > 3:
+        halo_id = int(sys.argv[3])
+    else:
+        curdir = os.path.basename(os.path.abspath(os.curdir))
+        ds_key = os.path.basename(ddsfn)
+
+        if curdir not in datasets:
+            raise RuntimeError("Can't find %s in dataset collection." % curdir)
+        my_sim = datasets[curdir]
+        if ds_key not in my_sim:
+            raise RuntimeError("Can't find %s in %s simulation." % (ds_key, curdir))
+        halo_id = my_sim[ds_key]
+        yt.mylog.info("Running profiles for halo %06d." % halo_id)
+
+    run_halo_catalog(ddsfn, hdsfn, halo_id)

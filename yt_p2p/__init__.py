@@ -15,3 +15,6 @@ Pop2Prime project analysis tools.
 
 from yt_p2p.fields import \
     add_p2p_fields
+
+from yt_p2p.particles import \
+    add_p2p_particle_filters

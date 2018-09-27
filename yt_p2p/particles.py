@@ -27,7 +27,7 @@ add_particle_filter(
     "pop_3", function=_pop3, filtered_type="all",
     requires=["particle_type", "creation_time", "particle_mass"])
 
-def add_particle_filters(ds):
+def add_p2p_particle_filters(ds):
     pfilters = ["pop_3"]:
     for pfilter in pfilters:
         if not ds.add_particle_filter(pfilter):

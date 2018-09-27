@@ -200,7 +200,9 @@ def run_halo_catalog(ddsfn, hdsfn, halo_id):
 
     # 2D radial profiles
     rprofs = [("density", 'g/cm**3'),
-              ("metallicity3_min7", 'Zsun')]
+              ("metallicity3_min7", 'Zsun'),
+              ("temperature", 'K'),
+              ("H2_fraction", '')]
     for my_field, field_units in rprofs:
         hc.add_recipe("my_2d_radial_profile", "radial_profiles",
                       my_field, field_units)

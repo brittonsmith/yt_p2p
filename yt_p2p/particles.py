@@ -24,11 +24,11 @@ def _pop3(pfilter, data):
         | ((data['particle_type'] == 5) & (data['particle_mass'].in_units('Msun') > 1e-3))
 
 add_particle_filter(
-    "pop_3", function=_pop3, filtered_type="all",
+    "pop3", function=_pop3, filtered_type="all",
     requires=["particle_type", "creation_time", "particle_mass"])
 
 def add_p2p_particle_filters(ds):
-    pfilters = ["pop_3"]:
+    pfilters = ["pop3"]
     for pfilter in pfilters:
         if not ds.add_particle_filter(pfilter):
             mylog.warn("Failed to add filter: %s." % pfilter)

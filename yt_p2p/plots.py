@@ -71,7 +71,7 @@ def plot_profile_distribution(
 def plot_profile_distribution_legend(
         my_axes, items, step=1, label_rotation=0,
         fontsize=12, lfontsize=8, alpha_scale=1.0,
-        lwidth=0.1, lheight=0.2):
+        lwidth=0.1, lheight=0.2, lpos=None):
 
     my_pos = np.array(my_axes.get_position())
     panel_width = my_pos[1, 0] - my_pos[0, 0]
@@ -79,9 +79,11 @@ def plot_profile_distribution_legend(
 
     my_lwidth = lwidth * len(items) * panel_width
     my_lheight = lheight * panel_height
+    if lpos is None:
+        lpos = (my_pos[0, 0] + 0.1,
+                my_pos[1, 1] - my_lheight - 0.05)
     lax = my_axes.figure.add_axes(
-        (my_pos[0, 0] + 0.1,
-         my_pos[1, 1] - my_lheight - 0.05,
+        (lpos[0], lpos[1],
          my_lwidth, my_lheight))
 
     ihalf = 50

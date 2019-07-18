@@ -8,11 +8,13 @@ from the halo scale down to the collapsed object.
 
 For each simulation, the target halo was:
 
-cc_512_collapse_solar_dust    DD0182  87497
-cc_512_collapse_solar_no_dust DD0185  66768
-cc_512_no_dust_continue       DD0560  41732
-cc_512_no_dust_continue_2     DD0532 161449
-cc_512_continue_collapse_dust DD0564  50010
+cc_512_collapse_solar_dust           DD0182  87497
+cc_512_collapse_solar_no_dust        DD0185  66768
+cc_512_no_dust_continue              DD0560  41732
+cc_512_no_dust_continue_no_metal     DD0560  41732 (from cc_512_no_dust_continue)
+cc_512_no_dust_continue_no_metal_ms2 DD0533  41732 (from cc_512_no_dust_continue)
+cc_512_no_dust_continue_2            DD0532 161449
+cc_512_continue_collapse_dust        DD0564  50010
 """
 import numpy as np
 import os
@@ -102,12 +104,14 @@ def my_2d_radial_profile(hc, output_dir, my_field, field_units,
     hc.add_callback("delete_attribute", "profiles_object")
 add_recipe("my_2d_radial_profile", my_2d_radial_profile)
 
-def my_2d_density_profile(hc, output_dir, my_field,
+def my_2d_density_profile(hc, output_dir, my_field, field_units,
                           log=True):
     hc.add_callback(
         "profile", [("gas", "number_density"),
                     ("gas", my_field)], ["cell_mass"],
-        weight_field=None, bin_density=20)
+        weight_field=None, bin_density=20,
+        units={("gas", my_field): field_units,
+               ("gas", "number_density"): "cm**-3"})
     hc.add_callback("save_object_as_dataset", "profiles_object",
                     output_dir=output_dir, filename=my_field)
     hc.add_callback("delete_attribute", "profiles")
@@ -190,13 +194,19 @@ def run_halo_catalog(ddsfn, hdsfn, halo_id):
     hc.add_callback("delete_attribute", "profiles_object")
 
     # 2D density profiles
-    nprofs = ["H2_fraction",
-              "HD_fraction",
-              "HD_H2_ratio",
-              "temperature"]
-    for my_field in nprofs:
+    nprofs = [("H2_fraction", ""),
+              ("HD_fraction", ""),
+              ("HD_H2_ratio", ""),
+              ("temperature", "K"),
+              ("vortical_dynamical_ratio", ""),
+              ("vortical_cooling_ratio",   ""),
+              ("cooling_dynamical_ratio",  ""),
+              ("vortical_time", "yr"),
+              ("dynamical_time","yr"),
+              ("cooling_time",  "yr")]
+    for my_field, field_units in nprofs:
         hc.add_recipe("my_2d_density_profile", "density_profiles",
-                      my_field)
+                      my_field, field_units)
 
     # 2D radial profiles
     rprofs = [("density", 'g/cm**3'),
@@ -246,11 +256,13 @@ if __name__ == "__main__":
     hdsfn = sys.argv[2]
 
     datasets = {
-        'cc_512_collapse_solar_dust':    {'DD0182':  87497},
-        'cc_512_collapse_solar_no_dust': {'DD0185':  66768},
-        'cc_512_no_dust_continue':       {'DD0560':  41732},
-        'cc_512_no_dust_continue_2':     {'DD0532':  161449},
-        'cc_512_continue_collapse_dust': {'DD0564':   50010}}
+        'cc_512_collapse_solar_dust':       {'DD0182':  87497},
+        'cc_512_collapse_solar_no_dust':    {'DD0185':  66768},
+        'cc_512_no_dust_continue':          {'DD0560':  41732},
+        'cc_512_no_dust_continue_no_metal': {'DD0560':  41732},
+        'cc_512_no_dust_continue_no_metal_ms2': {'DD0533':  41732},
+        'cc_512_no_dust_continue_2':        {'DD0532': 161449},
+        'cc_512_continue_collapse_dust':    {'DD0564':  50010}}
 
     if len(sys.argv) > 3:
         halo_id = int(sys.argv[3])

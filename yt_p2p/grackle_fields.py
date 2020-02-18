@@ -34,7 +34,7 @@ _parameter_map = {
     "UVbackground_redshift_drop": "RadiationRedshiftDropOff",
     "use_radiative_transfer": "RadiativeTransfer",
     "radiative_transfer_coupled_rate_solver": "RadiativeTransferCoupledRateSolver",
-    "radiative_transfer_hydrogen_only": "RadiativeTransferReadParameters",
+    "radiative_transfer_hydrogen_only": "RadiativeTransferHydrogenOnly",
     "with_radiative_cooling": "with_radiative_cooling",
     "use_volumetric_heating_rate": "use_volumetric_heating_rate",
     "use_specific_heating_rate": "use_specific_heating_rate",
@@ -61,7 +61,7 @@ _field_map = {
     'DII': (('gas', 'D_p1_density'), 'density_units'),
     'HDI': (('gas', 'HD_p0_density'), 'density_units'),
     'de': (('gas', 'El_density'), 'density_units'),
-    'metal': (('gas', 'metal_density'), 'density_units'),
+    'metal': (('gas', 'total_metal_density'), 'density_units'),
     'dust': (('gas', 'dust_density'), 'density_units'),
     'x-velocity': (('gas', 'velocity_x'), 'velocity_units'),
     'y-velocity': (('gas', 'velocity_y'), 'velocity_units'),
@@ -90,10 +90,21 @@ def _data_to_fc(data, size=None):
 
     return fc
 
-def prepare_grackle_data(ds):
+def prepare_grackle_data(ds, parameters=None):
     my_chemistry = chemistry_data()
     for gpar, dpar in _parameter_map.items():
         val = ds.parameters.get(dpar)
+        if val is None:
+            continue
+        if isinstance(val, str):
+            sval = bytearray(val, 'utf-8')
+            setattr(my_chemistry, gpar, sval)
+        else:
+            setattr(my_chemistry, gpar, val)
+
+    if parameters is None:
+        parameters = {}
+    for gpar, val in parameters.items():
         if val is None:
             continue
         if isinstance(val, str):
@@ -138,8 +149,8 @@ def _grackle_field(field, data):
 
     return fdata * data.ds.quan(1, units).in_cgs()
 
-def add_grackle_fields(ds):
-    prepare_grackle_data(ds)
+def add_grackle_fields(ds, parameters=None):
+    prepare_grackle_data(ds, parameters=parameters)
     for field, units in _grackle_fields.items():
         fname = "grackle_%s" % field
         funits = str(ds.quan(1, units).in_cgs().units)

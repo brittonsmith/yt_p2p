@@ -28,6 +28,19 @@ def _metallicity3_min7(field, data):
     field_data[field_data < min_Z] = 0.5 * min_Z
     return field_data
 
+def _total_metal_density(field, data):
+    field_data = np.zeros_like(data["gas", "density"])
+    fields = [("enzo", "Metal_Density"),
+              ("enzo", "SN_Colour")]
+    for field in fields:
+        if field in data.ds.field_list:
+            field_data += data[field]
+    return field_data
+
+def _total_metallicity(field, data):
+    return data["gas", "total_metal_density"] / \
+        data["gas", "density"]
+
 def _tangential_velocity_magnitude(field, data):
     return np.sqrt(data["gas", "velocity_spherical_theta"]**2 +
                    data["gas", "velocity_spherical_phi"]**2)
@@ -61,6 +74,12 @@ def add_p2p_fields(ds):
                  units="g", sampling_type="cell")
     ds.add_field(("gas", "metallicity3_min7"),
                  function=_metallicity3_min7,
+                 units="Zsun", sampling_type="cell")
+    ds.add_field(("gas", "total_metal_density"),
+                 function=_total_metal_density,
+                 units="g/cm**3", sampling_type="cell")
+    ds.add_field(("gas", "total_metallicity"),
+                 function=_total_metallicity,
                  units="Zsun", sampling_type="cell")
     ds.add_field(("gas", "vortical_time"),
                  function=_vortical_time,

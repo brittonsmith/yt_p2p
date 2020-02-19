@@ -155,9 +155,7 @@ def _grackle_field(field, data):
 
     return fdata * data.ds.quan(1, units).in_cgs()
 
-def _cooling_metallicity(field, data):
-    fc, gfields = _data_to_fc(data)
-
+def _calculate_cooling_metallicity(data, fc, gfields):
     td = data['gas', 'dynamical_time'].to('code_time').d
     flatten = len(td.shape) > 1
     if flatten:
@@ -185,6 +183,22 @@ def _cooling_metallicity(field, data):
         field_data = field_data.reshape(data.ActiveDimensions)
     return field_data
 
+def _cooling_metallicity(field, data):
+    fc, gfields = _data_to_fc(data)
+    return _calculate_cooling_metallicity(data, fc, gfields)
+
+def _cooling_metallicity_diss(field, data):
+    fc, gfields = _data_to_fc(data)
+    if fc.chemistry_data.primordial_chemistry > 1:
+        fc['HI'] += fc['H2I'] + fc['H2II']
+        fc['H2I'][:] = 0
+        fc['H2II'][:] = 0
+    if fc.chemistry_data.primordial_chemistry > 2:
+        fc['HI'] += fc['HDI'] / 3
+        fc['DI'] += 2 * fc['HDI'] / 3
+        fc['HDI'][:] = 0
+    return _calculate_cooling_metallicity(data, fc, gfields)
+
 def add_grackle_fields(ds, parameters=None):
     prepare_grackle_data(ds, parameters=parameters)
     for field, units in _grackle_fields.items():
@@ -195,4 +209,7 @@ def add_grackle_fields(ds, parameters=None):
 
     ds.add_field("cooling_metallicity",
                  function=_cooling_metallicity,
+                 units="Zsun", sampling_type="cell")
+    ds.add_field("cooling_metallicity_diss",
+                 function=_cooling_metallicity_diss,
                  units="Zsun", sampling_type="cell")

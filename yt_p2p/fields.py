@@ -15,6 +15,8 @@ Pop2Prime fields.
 
 import numpy as np
 
+from yt.utilities.physical_constants import G
+
 def _metallicity3(field, data):
     return data["enzo", "SN_Colour"] / data["gas", "density"]
 
@@ -40,6 +42,12 @@ def _total_metal_density(field, data):
 def _total_metallicity(field, data):
     return data["gas", "total_metal_density"] / \
         data["gas", "density"]
+
+def _total_dynamical_time(field, data):
+    """
+    sqrt(3 pi / (16 G rho))
+    """
+    return np.sqrt(3.0 * np.pi / (16.0 * data["gas", "matter_density"] * G))
 
 def _tangential_velocity_magnitude(field, data):
     return np.sqrt(data["gas", "velocity_spherical_theta"]**2 +
@@ -81,6 +89,9 @@ def add_p2p_fields(ds):
     ds.add_field(("gas", "total_metallicity"),
                  function=_total_metallicity,
                  units="Zsun", sampling_type="cell")
+    ds.add_field(("gas", "total_dynamical_time"),
+                 function=_total_dynamical_time,
+                 units="s", sampling_type="cell")
     ds.add_field(("gas", "vortical_time"),
                  function=_vortical_time,
                  units="s", sampling_type="cell")

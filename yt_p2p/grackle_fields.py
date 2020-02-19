@@ -156,7 +156,7 @@ def _grackle_field(field, data):
     return fdata * data.ds.quan(1, units).in_cgs()
 
 def _calculate_cooling_metallicity(data, fc, gfields):
-    td = data['gas', 'dynamical_time'].to('code_time').d
+    td = data['gas', 'total_dynamical_time'].to('code_time').d
     flatten = len(td.shape) > 1
     if flatten:
         td = td.flatten()

@@ -1,3 +1,5 @@
+import numpy as np
+from scipy.optimize import brentq
 from yt.fields.field_detector import \
     FieldDetector
 from yt.utilities.physical_constants import \
@@ -69,16 +71,20 @@ _field_map = {
     'energy': (('gas', 'thermal_energy'), 'energy_units')
 }
 
-def _data_to_fc(data, size=None):
+def _data_to_fc(data, size=None, fc=None):
     if size is None:
         size = data['gas', 'density'].size
-    fc = FluidContainer(data.ds.grackle_data, size)
+    if fc is None:
+        fc = FluidContainer(data.ds.grackle_data, size)
 
     flatten = len(data['gas', 'density'].shape) > 1
 
+    fields = []
     for gfield, (yfield, units) in _field_map.items():
         if yfield not in data.ds.field_info:
             continue
+
+        fields.append(gfield)
         conv = getattr(fc.chemistry_data, units)
         fdata = data[yfield] / conv
         if flatten:
@@ -88,7 +94,7 @@ def _data_to_fc(data, size=None):
     if 'de' in fc:
         fc['de'] *= (mp/me)
 
-    return fc
+    return fc, fields
 
 def prepare_grackle_data(ds, parameters=None):
     my_chemistry = chemistry_data()
@@ -139,7 +145,7 @@ def _grackle_field(field, data):
     if not hasattr(data.ds, "grackle_data"):
         raise RuntimeError("Grackle has not been initialized.")
 
-    fc = _data_to_fc(data)
+    fc, _ = _data_to_fc(data)
     func = "calculate_%s" % gfield
     getattr(fc, func)()
 
@@ -149,6 +155,36 @@ def _grackle_field(field, data):
 
     return fdata * data.ds.quan(1, units).in_cgs()
 
+def _cooling_metallicity(field, data):
+    fc, gfields = _data_to_fc(data)
+
+    td = data['gas', 'dynamical_time'].to('code_time').d
+    flatten = len(td.shape) > 1
+    if flatten:
+        td = td.flatten()
+    fc_mini = FluidContainer(data.ds.grackle_data, 1)
+
+    def cdrat(Z, my_td):
+        fc_mini['metal'][:] = Z * fc_mini['density']
+        fc_mini.calculate_cooling_time()
+        return my_td + fc_mini['cooling_time'][0]
+
+    field_data = data.ds.arr(np.zeros(td.size), '')
+    if isinstance(data, FieldDetector):
+        return field_data
+
+    for i in range(field_data.size):
+        for mfield in gfields:
+            fc_mini[mfield][:] = fc[mfield][i]
+        fc_mini.calculate_cooling_time()
+        if td[i] + fc_mini['cooling_time'][0] > 0:
+            continue
+        field_data[i] = brentq(cdrat, 1e-8, 1, args=(td[i]))
+
+    if flatten:
+        field_data = field_data.reshape(data.ActiveDimensions)
+    return field_data
+
 def add_grackle_fields(ds, parameters=None):
     prepare_grackle_data(ds, parameters=parameters)
     for field, units in _grackle_fields.items():
@@ -156,3 +192,7 @@ def add_grackle_fields(ds, parameters=None):
         funits = str(ds.quan(1, units).in_cgs().units)
         ds.add_field(fname, function=_grackle_field,
                      sampling_type="cell", units=funits)
+
+    ds.add_field("cooling_metallicity",
+                 function=_cooling_metallicity,
+                 units="Zsun", sampling_type="cell")

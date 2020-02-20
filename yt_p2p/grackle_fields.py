@@ -155,8 +155,12 @@ def _grackle_field(field, data):
 
     return fdata * data.ds.quan(1, units).in_cgs()
 
-def _calculate_cooling_metallicity(data, fc, gfields):
-    td = data['gas', 'total_dynamical_time'].to('code_time').d
+def _calculate_cooling_metallicity(field, data, fc, gfields):
+    if field.name[1].endswith('tdt'):
+        tdfield = 'total_dynamical_time'
+    else:
+        tdfield = 'dynamical_time'
+    td = data['gas', tdfield].to('code_time').d
     flatten = len(td.shape) > 1
     if flatten:
         td = td.flatten()
@@ -185,7 +189,7 @@ def _calculate_cooling_metallicity(data, fc, gfields):
 
 def _cooling_metallicity(field, data):
     fc, gfields = _data_to_fc(data)
-    return _calculate_cooling_metallicity(data, fc, gfields)
+    return _calculate_cooling_metallicity(field, data, fc, gfields)
 
 def _cooling_metallicity_diss(field, data):
     fc, gfields = _data_to_fc(data)
@@ -197,7 +201,7 @@ def _cooling_metallicity_diss(field, data):
         fc['HI'] += fc['HDI'] / 3
         fc['DI'] += 2 * fc['HDI'] / 3
         fc['HDI'][:] = 0
-    return _calculate_cooling_metallicity(data, fc, gfields)
+    return _calculate_cooling_metallicity(field, data, fc, gfields)
 
 def add_grackle_fields(ds, parameters=None):
     prepare_grackle_data(ds, parameters=parameters)
@@ -207,9 +211,10 @@ def add_grackle_fields(ds, parameters=None):
         ds.add_field(fname, function=_grackle_field,
                      sampling_type="cell", units=funits)
 
-    ds.add_field("cooling_metallicity",
-                 function=_cooling_metallicity,
-                 units="Zsun", sampling_type="cell")
-    ds.add_field("cooling_metallicity_diss",
-                 function=_cooling_metallicity_diss,
-                 units="Zsun", sampling_type="cell")
+    for suf in ['', '_tdt']:
+        ds.add_field("cooling_metallicity%s" % suf,
+                     function=_cooling_metallicity,
+                     units="Zsun", sampling_type="cell")
+        ds.add_field("cooling_metallicity_diss%s" % suf,
+                     function=_cooling_metallicity_diss,
+                     units="Zsun", sampling_type="cell")

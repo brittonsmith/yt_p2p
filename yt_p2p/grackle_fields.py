@@ -166,6 +166,8 @@ def _calculate_cooling_metallicity(field, data, fc, gfields):
         td = td.flatten()
     fc_mini = FluidContainer(data.ds.grackle_data, 1)
 
+    fc.calculate_cooling_time()
+
     def cdrat(Z, my_td):
         fc_mini['metal'][:] = Z * fc_mini['density']
         fc_mini.calculate_cooling_time()
@@ -176,12 +178,19 @@ def _calculate_cooling_metallicity(field, data, fc, gfields):
         return field_data
 
     for i in range(field_data.size):
+        if td[i] + fc['cooling_time'][i] > 0:
+            continue
         for mfield in gfields:
             fc_mini[mfield][:] = fc[mfield][i]
-        fc_mini.calculate_cooling_time()
-        if td[i] + fc_mini['cooling_time'][0] > 0:
-            continue
-        field_data[i] = brentq(cdrat, 1e-8, 1, args=(td[i]))
+        bds = np.logspace(-2, 1, 4)
+        for bd in bds:
+            success = False
+            try:
+                field_data[i] = brentq(cdrat, 1e-6, bd, args=(td[i]))
+                success = True
+                break
+            except:
+                continue
 
     if flatten:
         field_data = field_data.reshape(data.ActiveDimensions)

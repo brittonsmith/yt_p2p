@@ -68,7 +68,8 @@ _field_map = {
     'x-velocity': (('gas', 'velocity_x'), 'velocity_units'),
     'y-velocity': (('gas', 'velocity_y'), 'velocity_units'),
     'z-velocity': (('gas', 'velocity_z'), 'velocity_units'),
-    'energy': (('gas', 'thermal_energy'), 'energy_units')
+    'energy': (('gas', 'thermal_energy'), 'energy_units'),
+    'RT_heating_rate': (('gas', 'photo_gamma'), '')
 }
 
 def _data_to_fc(data, size=None, fc=None):
@@ -85,8 +86,11 @@ def _data_to_fc(data, size=None, fc=None):
             continue
 
         fields.append(gfield)
-        conv = getattr(fc.chemistry_data, units)
-        fdata = data[yfield] / conv
+        fdata = data[yfield].copy()
+        if units:
+            conv = getattr(fc.chemistry_data, units, 1)
+            fdata /= conv
+
         if flatten:
             fdata = fdata.flatten()
         fc[gfield][:] = fdata
@@ -146,8 +150,9 @@ def _grackle_field(field, data):
         raise RuntimeError("Grackle has not been initialized.")
 
     fc, _ = _data_to_fc(data)
-    func = "calculate_%s" % gfield
-    getattr(fc, func)()
+    if not isinstance(data, FieldDetector):
+        func = "calculate_%s" % gfield
+        getattr(fc, func)()
 
     fdata = fc[gfield]
     if hasattr(data, 'ActiveDimensions'):

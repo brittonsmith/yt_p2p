@@ -8,7 +8,7 @@ from pygrackle import \
     FluidContainer, \
     chemistry_data
 
-# from yt.funcs import get_pbar
+from yt.funcs import get_pbar
 
 _parameter_map = {
     "use_grackle": "use_grackle",
@@ -184,25 +184,34 @@ def _calculate_cooling_metallicity(field, data, fc, gfields):
     if isinstance(data, FieldDetector):
         return field_data
 
-    # pbar = get_pbar('splines', field_data.size)
+    pbar = get_pbar('Reticulating splines', field_data.size, parallel=True)
     for i in range(field_data.size):
-        # pbar.update(i)
+        pbar.update(i)
         if td[i] + fc['cooling_time'][i] > 0:
             continue
         for mfield in gfields:
             fc_mini[mfield][:] = fc[mfield][i]
-        bds = np.logspace(-2, 2, 5)
         success = False
-        for bd in bds:
+        if i > 0 and field_data[i-1] > 0:
             try:
-                field_data[i] = brentq(cdrat, 1e-6, bd, args=(td[i]))
+                field_data[i] = brentq(
+                    cdrat, 0.1*field_data[i-1], 10*field_data[i-1],
+                    args=(td[i]), xtol=1e-6)
                 success = True
-                break
             except:
-                continue
+                pass
         if not success:
-            field_data[i] = np.nan
-    # pbar.finish()
+            bds = np.logspace(-2, 2, 5)
+            for bd in bds:
+                try:
+                    field_data[i] = brentq(cdrat, 1e-6, bd, args=(td[i]), xtol=1e-6)
+                    success = True
+                    break
+                except:
+                    continue
+            if not success:
+                field_data[i] = np.nan
+    pbar.finish()
 
     if flatten:
         field_data = field_data.reshape(data.ActiveDimensions)

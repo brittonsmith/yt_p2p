@@ -8,7 +8,10 @@ from pygrackle import \
     FluidContainer, \
     chemistry_data
 
-from yt.funcs import get_pbar
+from yt.config import ytcfg
+from yt.funcs import \
+    get_pbar, \
+    DummyProgressBar
 
 _parameter_map = {
     "use_grackle": "use_grackle",
@@ -184,7 +187,15 @@ def _calculate_cooling_metallicity(field, data, fc, gfields):
     if isinstance(data, FieldDetector):
         return field_data
 
-    pbar = get_pbar('Reticulating splines', field_data.size, parallel=True)
+    if field_data.size > 200000:
+        my_str = "Reticulating splines"
+        if ytcfg.getboolean("yt","__parallel"):
+            my_str = "P%03d %s" % \
+                (ytcfg.getint("yt", "__global_parallel_rank"),
+                 my_str)
+        pbar = get_pbar(my_str, field_data.size, parallel=True)
+    else:
+        pbar = DummyProgressBar()
     for i in range(field_data.size):
         pbar.update(i)
         if td[i] + fc['cooling_time'][i] > 0:

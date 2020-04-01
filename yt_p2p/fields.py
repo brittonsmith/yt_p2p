@@ -15,6 +15,8 @@ Pop2Prime fields.
 
 import numpy as np
 
+from yt.utilities.exceptions import \
+    YTFieldNotFound
 from yt.utilities.physical_constants import G
 
 def _metallicity3(field, data):
@@ -71,45 +73,52 @@ def _vortical_cooling_ratio(field, data):
 def _cooling_dynamical_ratio(field, data):
     return data["gas", "cooling_time"] / data["gas", "dynamical_time"]
 
+def add_p2p_field(ds, name, function=None, units='', sampling_type='cell'):
+    try:
+        ds.add_field(name, function=function,
+                     units=units, sampling_type=sampling_type)
+    except YTFieldNotFound:
+        pass
+
 def add_p2p_fields(ds):
     # use the value of solar metallicity in the dataset
     ds.unit_registry.modify('Zsun', ds.parameters['SolarMetalFractionByMass'])
-    ds.add_field("metallicity3",
-                 function=_metallicity3,
-                 units="Zsun", sampling_type="cell")
-    ds.add_field(("gas", "metal3_mass"),
-                 function=_metal3_mass,
-                 units="g", sampling_type="cell")
-    ds.add_field(("gas", "metallicity3_min7"),
-                 function=_metallicity3_min7,
-                 units="Zsun", sampling_type="cell")
-    ds.add_field(("gas", "total_metal_density"),
-                 function=_total_metal_density,
-                 units="g/cm**3", sampling_type="cell")
-    ds.add_field(("gas", "total_metallicity"),
-                 function=_total_metallicity,
-                 units="Zsun", sampling_type="cell")
-    ds.add_field(("gas", "total_dynamical_time"),
-                 function=_total_dynamical_time,
-                 units="s", sampling_type="cell")
-    ds.add_field(("gas", "vortical_time"),
-                 function=_vortical_time,
-                 units="s", sampling_type="cell")
-    ds.add_field(("gas", "dark_matter_mass"),
-                 function=_dark_matter_mass,
-                 units="g", sampling_type="cell")
-    ds.add_field(("gas", "vortical_dynamical_ratio"),
-                 function=_vortical_dynamical_ratio,
-                 units="", sampling_type="cell")
-    ds.add_field(("gas", "vortical_cooling_ratio"),
-                 function=_vortical_cooling_ratio,
-                 units="", sampling_type="cell")
-    ds.add_field(("gas", "cooling_dynamical_ratio"),
-                 function=_cooling_dynamical_ratio,
-                 units="", sampling_type="cell")
-    ds.add_field(("gas", "HD_H2_ratio"),
-                 function=_HD_H2,
-                 units="", sampling_type="cell")
-    ds.add_field(("gas", "tangential_velocity_magnitude"),
-                 function=_tangential_velocity_magnitude,
-                 units="cm/s", sampling_type="cell")
+    add_p2p_field(ds, "metallicity3",
+                  function=_metallicity3,
+                  units="Zsun", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "metal3_mass"),
+                  function=_metal3_mass,
+                  units="g", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "metallicity3_min7"),
+                  function=_metallicity3_min7,
+                  units="Zsun", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "total_metal_density"),
+                  function=_total_metal_density,
+                  units="g/cm**3", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "total_metallicity"),
+                  function=_total_metallicity,
+                  units="Zsun", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "total_dynamical_time"),
+                  function=_total_dynamical_time,
+                  units="s", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "vortical_time"),
+                  function=_vortical_time,
+                  units="s", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "dark_matter_mass"),
+                  function=_dark_matter_mass,
+                  units="g", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "vortical_dynamical_ratio"),
+                  function=_vortical_dynamical_ratio,
+                  units="", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "vortical_cooling_ratio"),
+                  function=_vortical_cooling_ratio,
+                  units="", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "cooling_dynamical_ratio"),
+                  function=_cooling_dynamical_ratio,
+                  units="", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "HD_H2_ratio"),
+                  function=_HD_H2,
+                  units="", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "tangential_velocity_magnitude"),
+                  function=_tangential_velocity_magnitude,
+                  units="cm/s", sampling_type="cell")

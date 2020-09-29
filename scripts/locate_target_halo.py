@@ -31,7 +31,8 @@ if __name__ == "__main__":
     if len(sys.argv) > 2:
         hds = yt.load(sys.argv[2])
     else:
-        hds = yt.load("rockstar_halos_2Myr/halos_%s.0.bin" %str(dds))
+        data_dir = os.path.dirname(dds.fullpath)
+        hds = yt.load(os.path.join(data_dir, "rockstar_halos/halos_%s.0.bin" % str(dds)))
 
     ad = hds.all_data()
     cr = ad.cut_region(["obj['particle_mass'].to('Msun') > 1e4"])
@@ -41,7 +42,7 @@ if __name__ == "__main__":
                      output_dir="halo_catalogs/location_catalogs/%s" % dds.basename)
     hc.add_callback("sphere", factor=1.)
     hc.add_quantity("max_gas_density")
-    hc.add_filter("quantity_value", "max_gas_density", ">", 1e-16, "g/cm**3")
+    hc.add_filter("quantity_value", "max_gas_density", ">", 1e-18, "g/cm**3")
     hc.add_callback("sphere_projection", ["density", "temperature", "metallicity3"],
                     weight_field="density", axes="xyz", output_dir="sphere_projections")
     hc.add_callback("sphere_projection", ["dark_matter_density"],

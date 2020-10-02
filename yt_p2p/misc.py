@@ -1,6 +1,6 @@
 import yt
 
-from yt.extensions.astro_analysis.halo_analysis.halo_callbacks import \
+from yt.extensions.astro_analysis.halo_analysis.halo_catalog.halo_callbacks import \
     periodic_distance
 
 from yt.utilities.exceptions import \

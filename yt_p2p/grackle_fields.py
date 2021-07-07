@@ -15,6 +15,63 @@ from yt.funcs import \
     get_pbar, \
     DummyProgressBar
 
+def _calculate_cooling_metallicity_fast(field, data, fc):
+    gfields = _get_needed_fields(fc.chemistry_data)
+    if field.name[1].endswith('tdt'):
+        tdfield = 'total_dynamical_time'
+    else:
+        tdfield = 'dynamical_time'
+    td = data['gas', tdfield].to('code_time').d
+    flatten = len(td.shape) > 1
+    if flatten:
+        td = td.flatten()
+
+    fc.chemistry_data.metal_cooling_only = 0
+    fc.chemistry_data.metal_cooling = 0
+    fc.calculate_cooling_time()
+    ct_0 = fc['cooling_time'] + td
+    calc = ct_0 > 0
+    lct_0 = np.log(ct_0[calc])
+    z = data.ds.arr(np.zeros(ct_0.size), '')
+
+    # if not isinstance(data, FieldDetector):
+    #     breakpoint()
+
+    fc.chemistry_data.metal_cooling = 1
+    fc.chemistry_data.metal_cooling_only = 1
+
+    z1 = 1e-4
+    lz1 = np.log(z1)
+    fc['metal'][:] = z1 * fc['density']
+    fc.calculate_cooling_time()
+    lct1 = np.log(-fc['cooling_time'])
+
+    z2 = 2 * z1
+    lz2 = np.log(z2)
+    fc['metal'][:] = z2 * fc['density']
+    fc.calculate_cooling_time()
+    lct2 = np.log(-fc['cooling_time'])
+
+    slope = ((lct2 - lct1) / (z2 - z1))[calc]
+    z[calc] = np.exp((lct_0 - lct1[calc]) / slope + lz1)
+    return z
+
+def _cooling_metallicity_fast(field, data):
+    fc = _data_to_fc(data)
+    return _calculate_cooling_metallicity_fast(field, data, fc)
+
+def _cooling_metallicity_diss_fast(field, data):
+    fc = _data_to_fc(data)
+    if fc.chemistry_data.primordial_chemistry > 1:
+        fc['HI'] += fc['H2I'] + fc['H2II']
+        fc['H2I'][:] = 0
+        fc['H2II'][:] = 0
+    if fc.chemistry_data.primordial_chemistry > 2:
+        fc['HI'] += fc['HDI'] / 3
+        fc['DI'] += 2 * fc['HDI'] / 3
+        fc['HDI'][:] = 0
+    return _calculate_cooling_metallicity_fast(field, data, fc)
+
 def _calculate_cooling_metallicity(field, data, fc):
     gfields = _get_needed_fields(fc.chemistry_data)
     if field.name[1].endswith('tdt'):
@@ -105,4 +162,10 @@ def add_p2p_grackle_fields(ds, parameters=None):
                      units="Zsun", sampling_type="cell")
         ds.add_field("cooling_metallicity_diss%s" % suf,
                      function=_cooling_metallicity_diss,
+                     units="Zsun", sampling_type="cell")
+        ds.add_field("cooling_metallicity_fast%s" % suf,
+                     function=_cooling_metallicity_fast,
+                     units="Zsun", sampling_type="cell")
+        ds.add_field("cooling_metallicity_diss_fast%s" % suf,
+                     function=_cooling_metallicity_diss_fast,
                      units="Zsun", sampling_type="cell")

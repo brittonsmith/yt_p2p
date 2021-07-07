@@ -22,18 +22,90 @@ from yt.extensions.astro_analysis.halo_analysis.api import \
 from yt.extensions.astro_analysis.halo_analysis.halo_callbacks import \
     periodic_distance
 
-def sphere_projection(halo, fields, weight_field=None, axes="xyz", output_dir="."):
+def sphere_projection(halo, fields, weight_field=None, axes="xyz", output_dir=".",
+                      sphere=None):
+    if sphere is None:
+        sphere = getattr(halo, 'data_object')
+    if sphere is None:
+        raise RuntimeError('No sphere provided.')
+
     yt.mylog.info("Projecting halo %d." % halo.quantities["particle_identifier"])
     for axis in axes:
         plot = yt.ProjectionPlot(halo.halo_catalog.data_ds, axis, fields,
-                                 weight_field=weight_field, data_source=halo.data_object, 
-                                 center=halo.data_object.center,
-                                 width=(2* halo.data_object.radius))
+                                 weight_field=weight_field, data_source=sphere,
+                                 center=sphere.center,
+                                 width=(2*sphere.radius))
         plot.set_axes_unit("pc")
         plot.annotate_title("M = %s." % halo.quantities["particle_mass"].in_units("Msun"))
         plot.save(os.path.join(halo.halo_catalog.output_dir, output_dir,
                                "halo_%06d" % (halo.quantities['particle_identifier'])))
 add_callback("sphere_projection", sphere_projection)
+
+def iterative_center_of_mass(halo, inner_radius,
+                             radius_field="virial_radius", step_ratio=0.9,
+                             use_gas=True, use_particles=False):
+    if step_ratio <= 0.0 or step_ratio >= 1.0:
+        raise RuntimeError(
+            "iterative_center_of_mass: step_ratio must be between 0 and 1.")
+
+    dds = halo.halo_catalog.data_ds
+    center_orig = halo_data_center(halo)
+    radius_orig = halo_data_radius(halo, radius_field="virial_radius")
+    sphere = get_my_sphere(halo, radius_field="virial_radius")
+
+    my_units = "pc"
+    yt.mylog.info("Halo %d: radius: %s, center: %s." %
+                  (halo.quantities["particle_identifier"],
+                   sphere.radius.in_units(my_units), sphere.center))
+    i = 0
+    try:
+        while sphere.radius > inner_radius:
+            old_center = sphere.center
+            new_center = sphere.quantities.center_of_mass(
+                use_gas=use_gas, use_particles=use_particles)
+            sphere = sphere.ds.sphere(
+                new_center, step_ratio * sphere.radius)
+
+            diff = periodic_distance(
+                old_center.in_units("unitary").v,
+                new_center.in_units("unitary").v)
+            diff = dds.quan(diff, "unitary")
+
+            # region = dds.box(sphere.center-1.05*sphere.radius,
+            #                  sphere.center+1.05*sphere.radius)
+            # for ax in "xyz":
+            #     p = yt.ProjectionPlot(
+            #         dds, ax, ["density", "metallicity3", "temperature"],
+            #         weight_field="density", center=sphere.center,
+            #         width=(2*sphere.radius), data_source=region)
+            #     if sphere.radius < sphere.ds.quan(0.1, "pc"):
+            #         my_units = "AU"
+            #     p.set_axes_unit(my_units)
+            #     p.set_cmap("density", "algae")
+            #     p.set_cmap("temperature", "gist_heat")
+            #     p.set_cmap("metallicity3", "kamae")
+            #     p.save("sphere_center_box/%s_%03d" % (str(dds), i))
+            i+=1
+            yt.mylog.info(
+                "Radius: %s, center: %s, diff: %s." %
+                (sphere.radius.in_units(my_units), sphere.center, diff))
+    except:
+        yt.mylog.info("Reached minimum radius.")
+        pass
+
+    distance = periodic_distance(
+        center_orig.in_units("unitary").v,
+        new_center.in_units("unitary").v)
+    distance = dds.quan(distance, "unitary")
+    yt.mylog.info("Recentering halo %d %f pc away." %
+                  (halo.quantities["particle_identifier"],
+                   distance.in_units("pc")))
+
+    set_halo_center(halo, new_center)
+    del sphere
+    yt.mylog.info("Original center: %s." % center_orig.to("unitary"))
+    yt.mylog.info("     New center: %s." % new_center.to("unitary"))
+add_callback("iterative_center_of_mass", iterative_center_of_mass)
 
 def halo_data_radius(halo, radius_field="virial_radius"):
     dds = halo.halo_catalog.data_ds

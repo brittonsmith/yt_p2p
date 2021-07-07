@@ -10,9 +10,15 @@ For each simulation, the target halo was:
 
 cc_512_collapse_solar_dust           DD0182  87497
 cc_512_collapse_solar_no_dust        DD0185  66768
+
+### rockstar_halos_2Myr catalogs
 cc_512_no_dust_continue              DD0560  41732
 cc_512_no_dust_continue_no_metal     DD0560  41732 (from cc_512_no_dust_continue)
 cc_512_no_dust_continue_no_metal_ms2 DD0533  41732 (from cc_512_no_dust_continue)
+
+### rockstar_halos catalogs
+cc_512_no_dust_continue              DD0560  16825
+
 cc_512_no_dust_continue_2            DD0532 161449
 cc_512_continue_collapse_dust        DD0564  50010
 """
@@ -258,9 +264,9 @@ if __name__ == "__main__":
     datasets = {
         'cc_512_collapse_solar_dust':       {'DD0182':  87497},
         'cc_512_collapse_solar_no_dust':    {'DD0185':  66768},
-        'cc_512_no_dust_continue':          {'DD0560':  41732},
-        'cc_512_no_dust_continue_no_metal': {'DD0560':  41732},
-        'cc_512_no_dust_continue_no_metal_ms2': {'DD0533':  41732},
+        'cc_512_no_dust_continue':          {'DD0560':  16825},
+        # 'cc_512_no_dust_continue_no_metal': {'DD0560':  41732},
+        # 'cc_512_no_dust_continue_no_metal_ms2': {'DD0533':  41732},
         'cc_512_no_dust_continue_2':        {'DD0532': 161449},
         'cc_512_continue_collapse_dust':    {'DD0564':  50010}}
 

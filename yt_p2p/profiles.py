@@ -1,9 +1,8 @@
+from more_itertools import always_iterable
 import numpy as np
 
 from yt.data_objects.profiles import \
     create_profile
-from yt.funcs import \
-    ensure_list
 from yt.units.yt_array import \
     YTArray
 
@@ -109,7 +108,7 @@ def my_profile(dobj, bin_fields, profile_fields, n_bins=None, extrema=None, logs
     if isinstance(n_bins, dict):
         n_bins = tuple([n_bins[bin_field] for bin_field in bin_fields])
     
-    bin_fields = ensure_list(bin_fields)
+    bin_fields = list(always_iterable(bin_fields))
     prof = create_profile(
         dobj, bin_fields, profile_fields, n_bins=n_bins,
         extrema=extrema, logs=logs, units=units, weight_field=weight_field,

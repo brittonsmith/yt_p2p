@@ -160,7 +160,9 @@ def prepare_model(cds, start_time, profile_index, fc=None):
     time_data = cds.data["time"]
     time_index = np.abs(time_data - start_time).argmin()
 
-    e_fields = ["dark_matter_density",
+    e_fields = ["external_pressure",
+                "dark_matter_density",
+                "total_metal_density",
                 "H2_p0_dissociation_rate",
                 "H_p0_ionization_rate",
                 "He_p0_ionization_rate",

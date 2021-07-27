@@ -160,14 +160,14 @@ def prepare_model(cds, start_time, profile_index, fc=None):
     time_data = cds.data["time"]
     time_index = np.abs(time_data - start_time).argmin()
 
-    e_fields = ["external_pressure",
-                "dark_matter_density",
-                "total_metal_density",
-                "H2_p0_dissociation_rate",
-                "H_p0_ionization_rate",
-                "He_p0_ionization_rate",
-                "He_p1_ionization_rate",
-                "photo_gamma"]
+    efields = ["external_pressure",
+               "dark_matter",
+               "metallicity",
+               "H2_p0_dissociation_rate",
+               "H_p0_ionization_rate",
+               "He_p0_ionization_rate",
+               "He_p1_ionization_rate",
+               "photo_gamma"]
     external_data = {}
 
     field_list = [field for field in cds.field_list if field[1] != "time"]
@@ -183,8 +183,15 @@ def prepare_model(cds, start_time, profile_index, fc=None):
         pfield = ("data", yfield[1])
 
         fc[gfield][:] = field_data[pfield][0].to(units)
-        if pfield[1] in e_fields:
-            external_data[gfield] = field_data[pfield].to(units)
+        # get external data to be used in fluid container
+        if pfield[1] in efields:
+            efields.pop(efields.index(pfield[1]))
+            external_data[gfield] = field_data[pfield].to(units).d
+
+    # get extra solely external data fields
+    for efield in efields:
+        yfield, units = _field_map[efield]
+        external_data[efield] = field_data[yfield].to(units).d
 
     if 'de' in fc:
         fc['de'] *= (mp/me).d

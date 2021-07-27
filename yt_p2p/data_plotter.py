@@ -21,7 +21,7 @@ class DataPlotter:
             y_field, x_field = plot
             y_data = data.get(plot[0])
             x_data = data.get(plot[1])
-            if None in (x_data, y_data):
+            if x_data is None or y_data is None:
                 continue
             self.plot_datum(y_field, x_data, y_data, **pkwargs)
 

@@ -24,4 +24,4 @@ if __name__ == "__main__":
     data['RefineRegionLeftEdge'] = ds.arr(data['RefineRegionLeftEdge'], 'unitary')
     data['RefineRegionRightEdge'] = ds.arr(data['RefineRegionRightEdge'], 'unitary')
 
-    yt.save_as_dataset(ds, filename='sim.h5',  data=data)
+    yt.save_as_dataset(ds, filename='simulation.h5',  data=data)

@@ -76,26 +76,25 @@ def default_func(func, tracked_val, new_vals):
     else:
         return func(tracked_val, func(new_vals))
 
-def track_global_binning(pdata, bin_data, nonzero=True):
+def track_global_binning(pdata, bin_data):
     if not bin_data:
         for key in ['max', 'min']:
             bin_data[key] = None
-    if nonzero:
-        my_pdata = pdata[pdata.nonzero()[0]]
-    else:
-        my_pdata = pdata
 
-    bin_data['min'] = default_func(min, bin_data['min'], my_pdata)
-    bin_data['max'] = default_func(max, bin_data['max'], my_pdata)
+    bin_data['min'] = default_func(min, bin_data['min'], pdata)
+    bin_data['max'] = default_func(max, bin_data['max'], pdata)
 
 def calc_global_binning(data, field, log=True, rounding=True, nonzero=True):
     binning = {}
     for datum in data:
+
+        my_datum = datum[field]
+        if nonzero:
+            my_datum = my_datum[my_datum.nonzero()[0]]
         if log:
-            my_datum = np.log10(datum[field])
-        else:
-            my_datum = datum[field]
-        track_global_binning(my_datum, binning, nonzero=nonzero)
+            my_datum = np.log10(my_datum)
+
+        track_global_binning(my_datum, binning)
     if rounding:
         binning['min'] = np.floor(binning['min'])
         binning['max'] = np.ceil(binning['max'])

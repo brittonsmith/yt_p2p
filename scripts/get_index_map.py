@@ -5,12 +5,13 @@ and the Enzo snapshot name.
 
 import numpy as np
 import os
+import sys
 import yaml
 import yt
 import ytree
 
 if __name__ == "__main__":
-    a = ytree.load('merger_trees/tree_43523709/tree_43523709.h5')
+    a = ytree.load(sys.argv[1])
     tree = a[0]
 
     es = yt.load('simulation.h5')
@@ -27,7 +28,9 @@ if __name__ == "__main__":
         file_map = []
         istart = 0
 
-    for node in tree['prog'][istart:]:
+    for inode, node in enumerate(tree['prog']):
+        if inode < istart:
+            continue
         if node['phantom']:
             continue
 
@@ -40,11 +43,11 @@ if __name__ == "__main__":
             hdsfn = 'rockstar_halos/halos_%s.0.bin' % os.path.basename(fns[i])
             hds = yt.load(hdsfn)
 
-            hid = hds.r['particle_identifier'].astype(int) == int(node['halo_id'])
+            hid = hds.r['all', 'particle_identifier'].astype(int) == int(node['halo_id'])
             if not hid.any():
                 continue
-            
-            hmass = hds.r['particle_mass'][hid].to('Msun')
+
+            hmass = hds.r['all', 'particle_mass'][hid].to('Msun')
             nmass = node['mass'].to('Msun')
 
             yt.mylog.info(f"Looking for node {node['uid']} ({node['halo_id']}) in {fns[i]}.")

@@ -17,9 +17,9 @@ import numpy as np
 import os
 import yt
 
-from yt.extensions.astro_analysis.halo_analysis.api import \
+from yt.extensions.astro_analysis.halo_analysis import \
     add_callback
-from yt.extensions.astro_analysis.halo_analysis.halo_callbacks import \
+from yt.extensions.astro_analysis.halo_analysis.halo_catalog.halo_callbacks import \
     periodic_distance
 
 def sphere_projection(halo, fields, weight_field=None, axes="xyz", output_dir=".",
@@ -29,16 +29,15 @@ def sphere_projection(halo, fields, weight_field=None, axes="xyz", output_dir=".
     if sphere is None:
         raise RuntimeError('No sphere provided.')
 
-    yt.mylog.info("Projecting halo %d." % halo.quantities["particle_identifier"])
+    yt.mylog.info(f"Projecting halo {int(halo.quantities['particle_identifier']):d}.")
     for axis in axes:
         plot = yt.ProjectionPlot(halo.halo_catalog.data_ds, axis, fields,
                                  weight_field=weight_field, data_source=sphere,
                                  center=sphere.center,
                                  width=(2*sphere.radius))
         plot.set_axes_unit("pc")
-        plot.annotate_title("M = %s." % halo.quantities["particle_mass"].in_units("Msun"))
-        plot.save(os.path.join(halo.halo_catalog.output_dir, output_dir,
-                               "halo_%06d" % (halo.quantities['particle_identifier'])))
+        plot.annotate_title(f"M = {halo.quantities['particle_mass'].in_units('Msun')}.")
+        plot.save(os.path.join(output_dir, f"halo_{int(halo.quantities['particle_identifier']):06d}"))
 add_callback("sphere_projection", sphere_projection)
 
 def iterative_center_of_mass(halo, inner_radius,

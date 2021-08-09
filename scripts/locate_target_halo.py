@@ -12,7 +12,7 @@ import sys
 import yt
 yt.enable_parallelism()
 
-from yt.extensions.astro_analysis.halo_analysis.api import \
+from yt.extensions.astro_analysis.halo_analysis import \
     HaloCatalog, \
     add_quantity
 
@@ -35,11 +35,12 @@ if __name__ == "__main__":
         hds = yt.load(os.path.join(data_dir, "rockstar_halos/halos_%s.0.bin" % str(dds)))
 
     ad = hds.all_data()
-    cr = ad.cut_region(["obj['particle_mass'].to('Msun') > 1e4"])
+    # cr = ad.cut_region(["obj['particle_mass'].to('Msun') > 1e4"])
 
     hc = HaloCatalog(halos_ds=hds, data_ds=dds,
-                     data_source=cr,
-                     output_dir="halo_catalogs/location_catalogs/%s" % dds.basename)
+                     # data_source=cr,
+                     output_dir="halo_catalogs/location_catalogs")
+    hc.add_filter("quantity_value", "particle_mass", ">", 1e4, "Msun")
     hc.add_callback("sphere", factor=1.)
     hc.add_quantity("max_gas_density")
     hc.add_filter("quantity_value", "max_gas_density", ">", 1e-18, "g/cm**3")

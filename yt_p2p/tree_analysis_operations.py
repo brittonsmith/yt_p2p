@@ -2,10 +2,12 @@
 Merger tree analysis operations.
 """
 
+import gc
 import os
 import yaml
 
 from yt.loaders import load as yt_load
+from yt.utilities.logger import ytLogger as mylog
 
 from yt.extensions.p2p.misc import \
     sphere_icom, \
@@ -28,19 +30,22 @@ def get_dataset_dict(data_dir):
 
     return _dataset_dicts[data_dir]
 
-def yt_dataset(node, data_dir):
+def get_yt_dataset(node, data_dir):
     ddict = get_dataset_dict(data_dir)
     dsfn = os.path.join(data_dir, ddict[int(node['Snap_idx'])])
-    ds = yt_load(dsfn)
-    node.ds = ds
+    return yt_load(dsfn)
+
+def yt_dataset(node, data_dir):
+    node.ds = get_yt_dataset(node, data_dir)
 
 add_operation("yt_dataset", yt_dataset)
 
-def get_node_sphere(node,
+def get_node_sphere(node, ds=None,
                     position_field="position",
                     radius_field="virial_radius",
                     radius_factor=1.0):
-    ds = node.ds
+    if ds is None:
+        ds = node.ds
     center = reunit(ds, node[position_field], "unitary")
     radius = radius_factor * reunit(ds, node[radius_field], "unitary")
     return ds.sphere(center, radius)
@@ -60,6 +65,8 @@ def node_icom(node):
     sphere = get_node_sphere(node)
     center = sphere_icom(sphere, 4*sphere["gas", "dx"].min(),
                          com_kwargs=dict(use_particles=False, use_gas=True))
+    sphere.clear_data()
+    del sphere
     center.convert_to_units("unitary")
     for iax, ax in enumerate("xyz"):
         node[f"icom_gas_position_{ax}"] = center[iax]
@@ -67,15 +74,19 @@ def node_icom(node):
     sphere = get_node_sphere(node)
     center = sphere_icom(sphere, 4*sphere["gas", "dx"].min(),
                          com_kwargs=dict(use_particles=True, use_gas=True))
+    sphere.clear_data()
+    del sphere
     center.convert_to_units("unitary")
     for iax, ax in enumerate("xyz"):
         node[f"icom_all_position_{ax}"] = center[iax]
-        
+
 add_operation("node_icom", node_icom)
 
 def delattrs(node, attrs):
     for attr in attrs:
         delattr(node, attr)
+    val = gc.collect()
+    mylog.info(f"Collected {val} garbages!")
 
 add_operation("delattrs", delattrs)
 

@@ -6,6 +6,9 @@ from yt.extensions.astro_analysis.halo_analysis.halo_catalog.halo_callbacks impo
 from yt.utilities.exceptions import \
     YTSphereTooSmall
 
+def dirname(path, up=0):
+    return "/".join(path.split('/')[:-up-1])
+
 def iterate_center_of_mass(sphere, inner_radius, stepsize=0.05,
                            com_kwargs=None):
     """

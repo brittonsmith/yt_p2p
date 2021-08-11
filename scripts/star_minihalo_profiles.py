@@ -20,10 +20,10 @@ from yt.extensions.p2p.tree_analysis_operations import yt_dataset
 from yt.extensions.p2p import add_p2p_fields
 
 def dirname(path, up=0):
-    return "/".join(path.split('/')[:-up-1])
+    return "/".join(path.split("/")[:-up-1])
 
 def decorate_plot(node, p):
-    p.set_axes_unit('pc')
+    p.set_axes_unit("pc")
     title = f"z = {node['redshift']:.2f}, M = {node['mass'].to('Msun'):.2g}"
     p.annotate_title(title)
 
@@ -45,7 +45,7 @@ def icom_sphere(node):
 add_operation("icom_sphere", icom_sphere)
 
 def my_yt_dataset(node, data_dir, es):
-    if 'Snap_idx' in node.arbor.field_list:
+    if "Snap_idx" in node.arbor.field_list:
         yt_dataset(node, data_dir)
     else:
         efns = es.data["filename"].astype(str)
@@ -71,7 +71,7 @@ def region_projections(node, output_dir="."):
                "metallicity3": "kamae",
                "H2_p0_fraction": "cool"}
 
-    for ax in 'xyz':
+    for ax in "xyz":
         do_fields = \
             [field for field in pfields
              if not os.path.exists(
@@ -79,7 +79,7 @@ def region_projections(node, output_dir="."):
 
         if do_fields:
             p = yt.ProjectionPlot(
-                ds, ax, do_fields, weight_field='density',
+                ds, ax, do_fields, weight_field="density",
                 center=sphere.center, width=2*sphere.radius,
                 data_source=region)
             for field, cmap in pfields.items():
@@ -88,16 +88,16 @@ def region_projections(node, output_dir="."):
             p.save(output_dir + "/")
 
     do_axes = \
-        [ax for ax in 'xyz'
+        [ax for ax in "xyz"
          if not os.path.exists(
              os.path.join(output_dir, f"{str(ds)}_Particle_{ax}_particle_mass.png"))]
     for ax in do_axes:
         p = yt.ParticleProjectionPlot(
-            ds, ax, 'particle_mass',
+            ds, ax, "particle_mass",
             center=sphere.center, width=2*sphere.radius,
             data_source=region)
-        p.set_unit('particle_mass', 'Msun')
-        p.set_cmap('particle_mass', 'turbo')
+        p.set_unit("particle_mass", "Msun")
+        p.set_cmap("particle_mass", "turbo")
         decorate_plot(node, p)
         p.save(output_dir + "/")
 
@@ -110,21 +110,21 @@ def mass_weighted_profiles(node, output_dir="."):
 
     data_source = node.sphere
     enzo_fields = [field for field in data_source.ds.field_list
-                   if field[0] == 'enzo']
+                   if field[0] == "enzo"]
     profile = my_profile(
         data_source,
         ("index", "radius"),
-        [('gas', 'density'),
-         ('gas', 'temperature'),
-         ('gas', 'cooling_time'),
-         ('gas', 'dynamical_time'),
-         ('gas', 'total_dynamical_time'),
-         ('gas', 'sound_speed'),
-         ('gas', 'pressure'),
-         ('gas', 'H2_p0_fraction'),
-         ('gas', 'metallicity3')] + enzo_fields,
+        [("gas", "density"),
+         ("gas", "temperature"),
+         ("gas", "cooling_time"),
+         ("gas", "dynamical_time"),
+         ("gas", "total_dynamical_time"),
+         ("gas", "sound_speed"),
+         ("gas", "pressure"),
+         ("gas", "H2_p0_fraction"),
+         ("gas", "metallicity3")] + enzo_fields,
         units={("index", "radius"): "pc"},
-        weight_field=('gas', 'cell_mass'),
+        weight_field=("gas", "cell_mass"),
     accumulation=False, bin_density=20)
     profile.save_as_dataset(filename=fn)
 
@@ -139,11 +139,11 @@ def volume_weighted_profiles(node, output_dir="."):
     profile = my_profile(
         data_source,
         ("index", "radius"),
-        [('gas', 'density'),
-         ('gas', 'dark_matter_density'),
-         ('gas', 'matter_density')],
+        [("gas", "density"),
+         ("gas", "dark_matter_density"),
+         ("gas", "matter_density")],
         units={("index", "radius"): "pc"},
-        weight_field=('index', 'cell_volume'),
+        weight_field=("index", "cell_volume"),
     accumulation=False, bin_density=20)
     profile.save_as_dataset(filename=fn)
 
@@ -158,9 +158,9 @@ def unweighted_profiles(node, output_dir="."):
     profile = my_profile(
         data_source,
         ("index", "radius"),
-        [('gas', 'cell_mass'),
-         ('gas', 'dark_matter_mass'),
-         ('gas', 'matter_mass')],
+        [("gas", "cell_mass"),
+         ("gas", "dark_matter_mass"),
+         ("gas", "matter_mass")],
         units={("index", "radius"): "pc"},
         weight_field=None,
     accumulation=False, bin_density=20)
@@ -169,18 +169,18 @@ def unweighted_profiles(node, output_dir="."):
 add_operation("unweighted_profiles", unweighted_profiles)
 
 if __name__ == "__main__":
-    output_data_dir = 'star_minihalo_profiles'
+    output_data_dir = "star_minihalo_profiles"
     ensure_dir(output_data_dir)
 
-    es = yt.load('simulation.h5')
+    es = yt.load("simulation.h5")
 
     # data_dir = dirname(afn, 2)
     data_dir = "/disk12/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue"
 
-    with open('star_hosts.yaml', 'r') as f:
+    with open("star_hosts.yaml", "r") as f:
         star_data = yaml.load(f, Loader=yaml.FullLoader)
 
-    star_cts = np.array([float(star['creation_time'].split()[0])
+    star_cts = np.array([float(star["creation_time"].split()[0])
                          for star in star_data.values()])
     star_ids = np.array(list(star_data.keys()))
     asct = star_cts.argsort()
@@ -191,9 +191,9 @@ if __name__ == "__main__":
         del star_data[double_id]
 
     for star_id, star_info in star_data.items():
-        a = ytree.load(star_info['arbor'])
-        if 'icom_gas_position_x' in a.field_list:
-            a.add_vector_field('icom_gas_position')
+        a = ytree.load(star_info["arbor"])
+        if "icom_gas_position_x" in a.field_list:
+            a.add_vector_field("icom_gas_position")
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
         ap = AnalysisPipeline(output_dir=output_dir)
@@ -205,16 +205,16 @@ if __name__ == "__main__":
         ap.add_operation("unweighted_profiles", output_dir=".")
         ap.add_operation("delattrs", ["sphere", "ds"])
 
-        my_tree = a[star_info['_arbor_index']]
-        form_node = my_tree.get_node('forest', star_info['tree_id'])
-        t_halo = form_node['time'].to('Myr')
-        nodes = [node for node in form_node['prog']
-                 if (t_halo - node['time'] < a.quan(50, 'Myr') or
-                     node['mass'] >= a.quan(1e4, 'Msun'))]
+        my_tree = a[star_info["_arbor_index"]]
+        form_node = my_tree.get_node("forest", star_info["tree_id"])
+        t_halo = form_node["time"].to("Myr")
+        nodes = [node for node in form_node["prog"]
+                 if (t_halo - node["time"] < a.quan(50, "Myr") or
+                     node["mass"] >= a.quan(1e4, "Msun"))]
 
         if yt.is_root():
             yt.mylog.info(f"Profiling {str(form_node)} for past "
-                          f"{str(nodes[0]['time'] - nodes[-1]['time'])}.")
+                          f"{str(nodes[0]["time"] - nodes[-1]["time"])}.")
 
         for i in yt.parallel_objects(range(len(nodes)), dynamic=True):
             ap.process_target(nodes[i])

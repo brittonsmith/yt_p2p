@@ -13,9 +13,7 @@ from yt.extensions.p2p.misc import \
     sphere_icom, \
     reunit
 
-from ytree.analysis import \
-    add_filter, \
-    add_operation
+from ytree.analysis import add_operation
 
 _dataset_dicts = {}
 def get_dataset_dict(data_dir):
@@ -97,7 +95,7 @@ def fields_not_assigned(node, fields):
             return True
     return False
 
-add_filter("fields_not_assigned", fields_not_assigned)
+add_operation("fields_not_assigned", fields_not_assigned)
 
 def add_analysis_fields(a, fields):
     for field, finfo in fields.items():

@@ -5,16 +5,15 @@ import ytree
 
 from ytree.analysis import \
     AnalysisPipeline, \
-    add_filter
-from ytree.utilities.parallel import \
-    parallel_nodes
+    add_operation
+from ytree.utilities.parallel import parallel_nodes
 
 from yt.extensions.p2p.tree_analysis_operations import add_analysis_fields
 
 def minimum_mass(node, val):
     return node["mass"] >= val
 
-add_filter("minimum_mass", minimum_mass)
+add_operation("minimum_mass", minimum_mass)
 
 if __name__ == "__main__":
     afn = sys.argv[1]
@@ -34,13 +33,13 @@ if __name__ == "__main__":
 
     data_dir = '.'
     ap = AnalysisPipeline()
-    ap.add_filter("minimum_mass", m_min)
-    ap.add_filter("fields_not_assigned", afields)
+    ap.add_operation("minimum_mass", m_min)
+    ap.add_operation("fields_not_assigned", afields)
     ap.add_operation("yt_dataset", data_dir)
     ap.add_operation("node_icom")
     ap.add_operation("delattrs", ["ds"])
 
     for node in parallel_nodes(trees, group=group, save_every=1,
-                               njobs=(1, 0), dynamic=(False, True)):
+                               njobs=(1, 0), dynamic=(False, False)):
 
         result = ap.process_target(node)

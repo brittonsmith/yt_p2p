@@ -1,16 +1,23 @@
+import copy
 import numpy as np
 import os
-import sys
+import time
 import yaml
 import yt
 yt.enable_parallelism()
 import ytree
 
-from yt.funcs import ensure_dir
+from pygrackle.yt_fields import \
+    prepare_grackle_data, \
+    _get_needed_fields, \
+    _field_map as _grackle_map
+
+from yt.frontends.enzo.data_structures import EnzoDataset
 
 from ytree.analysis import \
     AnalysisPipeline, \
-    add_operation
+    add_operation, \
+    add_recipe
 
 from yt.extensions.p2p.misc import \
     sphere_icom, \
@@ -18,9 +25,6 @@ from yt.extensions.p2p.misc import \
 from yt.extensions.p2p.profiles import my_profile
 from yt.extensions.p2p.tree_analysis_operations import yt_dataset
 from yt.extensions.p2p import add_p2p_fields
-
-def dirname(path, up=0):
-    return "/".join(path.split("/")[:-up-1])
 
 def decorate_plot(node, p):
     p.set_axes_unit("pc")
@@ -54,6 +58,7 @@ def my_yt_dataset(node, data_dir, es):
         dsfn = os.path.join(data_dir, efns[ifn])
         node.ds = yt.load(dsfn)
 
+    node.ds.grackle_fields = copy.deepcopy(es.grackle_fields)
     add_p2p_fields(node.ds)
 
 add_operation("my_yt_dataset", my_yt_dataset)
@@ -93,45 +98,64 @@ def region_projections(node, output_dir="."):
              os.path.join(output_dir, f"{str(ds)}_Particle_{ax}_particle_mass.png"))]
     for ax in do_axes:
         p = yt.ParticleProjectionPlot(
-            ds, ax, "particle_mass",
+            ds, ax, ("all", "particle_mass"),
             center=sphere.center, width=2*sphere.radius,
             data_source=region)
-        p.set_unit("particle_mass", "Msun")
-        p.set_cmap("particle_mass", "turbo")
+        p.set_unit(("all", "particle_mass"), "Msun")
+        p.set_cmap(("all", "particle_mass"), "turbo")
         decorate_plot(node, p)
         p.save(output_dir + "/")
 
 add_operation("region_projections", region_projections)
 
-def mass_weighted_profiles(node, output_dir="."):
-    fn = os.path.join(output_dir, f"{str(ds)}_profile_weight_field_mass.h5")
+def sphere_radial_profiles(node, fields, weight_field=None, output_dir="."):
+    if weight_field is None:
+        weight_name = "None"
+    else:
+        if not isinstance(weight_field, tuple) and len(weight_field) != 2:
+            raise ValueError("weight_field must be a tuple of length 2.")
+        weight_name = weight_field[1]
+
+    fn = os.path.join(output_dir, f"{str(node.ds)}_profile_weight_field_{weight_name}.h5")
     if os.path.exists(fn):
         return
 
     data_source = node.sphere
-    enzo_fields = [field for field in data_source.ds.field_list
-                   if field[0] == "enzo"]
     profile = my_profile(
         data_source,
-        ("index", "radius"),
+        ("index", "radius"), fields,
+        units={("index", "radius"): "pc"},
+        weight_field=weight_field,
+    accumulation=False, bin_density=20)
+    profile.save_as_dataset(filename=fn)
+
+add_operation("sphere_radial_profiles", sphere_radial_profiles)
+
+def mass_weighted_profiles(node, output_dir="."):
+
+    enzo_fields = [field for field in node.ds.field_list
+                   if field[0] == "enzo"]
+    fields = node.ds.grackle_fields + \
         [("gas", "density"),
+         ('gas', 'dark_matter_density'),
+         ('gas', 'matter_density'),
          ("gas", "temperature"),
+         ('gas', 'entropy'),
          ("gas", "cooling_time"),
          ("gas", "dynamical_time"),
          ("gas", "total_dynamical_time"),
          ("gas", "sound_speed"),
          ("gas", "pressure"),
          ("gas", "H2_p0_fraction"),
-         ("gas", "metallicity3")] + enzo_fields,
-        units={("index", "radius"): "pc"},
-        weight_field=("gas", "cell_mass"),
-    accumulation=False, bin_density=20)
-    profile.save_as_dataset(filename=fn)
+         ("gas", "metallicity3")]
+
+    sphere_radial_profiles(node, fields, weight_field=("gas", "cell_mass"),
+                           output_dir=output_dir)
 
 add_operation("mass_weighted_profiles", mass_weighted_profiles)
 
 def volume_weighted_profiles(node, output_dir="."):
-    fn = os.path.join(output_dir, f"{str(ds)}_profile_weight_field_volume.h5")
+    fn = os.path.join(output_dir, f"{str(node.ds)}_profile_weight_field_volume.h5")
     if os.path.exists(fn):
         return
 
@@ -150,7 +174,7 @@ def volume_weighted_profiles(node, output_dir="."):
 add_operation("volume_weighted_profiles", volume_weighted_profiles)
 
 def unweighted_profiles(node, output_dir="."):
-    fn = os.path.join(output_dir, f"{str(ds)}_profile_weight_field_None.h5")
+    fn = os.path.join(output_dir, f"{str(node.ds)}_profile_weight_field_None.h5")
     if os.path.exists(fn):
         return
 
@@ -168,13 +192,58 @@ def unweighted_profiles(node, output_dir="."):
 
 add_operation("unweighted_profiles", unweighted_profiles)
 
+def write_done_file(node, filename, output_dir="."):
+    fn = os.path.join(output_dir, filename)
+    if yt.is_root():
+        with open(fn, mode='w') as f:
+            f.write(f"{time.time()}\n")
+
+add_operation("write_done_file", write_done_file)
+
+def file_not_there(node, filename, output_dir="."):
+    fn = os.path.join(output_dir, filename)
+    return not os.path.exists(fn)
+
+add_operation("file_not_there", file_not_there)
+
+def my_analysis(pipeline, data_dir="."):
+    pipeline.add_operation("my_yt_dataset", data_dir, es)
+    pipeline.add_operation("icom_sphere")
+    pipeline.add_operation("region_projections", output_dir="projections")
+    pipeline.add_operation("mass_weighted_profiles", output_dir=".")
+    pipeline.add_operation(
+        "sphere_radial_profiles",
+        [("gas", "density"),
+         ("gas", "dark_matter_density"),
+         ("gas", "matter_density")],
+        weight_field=("gas", "cell_volume"), output_dir=".")
+    pipeline.add_operation(
+        "sphere_radial_profiles",
+        [("gas", "cell_mass"),
+         ("gas", "dark_matter_mass"),
+         ("gas", "matter_mass")],
+        weight_field=None, output_dir=".")
+    pipeline.add_operation("delattrs", ["sphere", "ds"])
+
+add_recipe("my_analysis", my_analysis)
+
 if __name__ == "__main__":
     output_data_dir = "star_minihalo_profiles"
-    ensure_dir(output_data_dir)
+
+    grackle_pars = {
+        "use_grackle": 1,
+        "primordial_chemistry": 3,
+        "metal_cooling": 1,
+        "with_radiative_cooling": 1,
+        "grackle_data_file": "cloudy_metals_2008_3D.h5",
+        "H2_self_shielding": 0,
+        "use_radiative_transfer": 1
+    }
 
     es = yt.load("simulation.h5")
+    prepare_grackle_data(es, parameters=grackle_pars, sim_type=EnzoDataset, initialize=False)
+    es.grackle_fields = [_grackle_map[field][0] for field in _get_needed_fields(es.grackle_data)]
 
-    # data_dir = dirname(afn, 2)
     data_dir = "/disk12/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue"
 
     with open("star_hosts.yaml", "r") as f:
@@ -196,25 +265,29 @@ if __name__ == "__main__":
             a.add_vector_field("icom_gas_position")
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
+        done_file = os.path.join(output_dir, "done")
+        if os.path.exists(done_file):
+            continue
+
         ap = AnalysisPipeline(output_dir=output_dir)
-        ap.add_operation("my_yt_dataset", ".", es)
-        ap.add_operation("icom_sphere")
-        ap.add_operation("region_projections", output_dir="projections")
-        ap.add_operation("mass_weighted_profiles", output_dir=".")
-        ap.add_operation("volume_weighted_profiles", output_dir=".")
-        ap.add_operation("unweighted_profiles", output_dir=".")
-        ap.add_operation("delattrs", ["sphere", "ds"])
+        ap.add_recipe("my_analysis", data_dir=data_dir)
 
         my_tree = a[star_info["_arbor_index"]]
+        # find the halo where the star formed
         form_node = my_tree.get_node("forest", star_info["tree_id"])
         t_halo = form_node["time"].to("Myr")
+        # get all nodes going back at least 50 Myr or until progenitor is 1e4 Msun
         nodes = [node for node in form_node["prog"]
                  if (t_halo - node["time"] < a.quan(50, "Myr") or
                      node["mass"] >= a.quan(1e4, "Msun"))]
 
         if yt.is_root():
             yt.mylog.info(f"Profiling {str(form_node)} for past "
-                          f"{str(nodes[0]["time"] - nodes[-1]["time"])}.")
+                          f"{str(nodes[0]['time'] - nodes[-1]['time'])}.")
 
         for i in yt.parallel_objects(range(len(nodes)), dynamic=True):
             ap.process_target(nodes[i])
+
+        if yt.is_root():
+            with open(done_file, mode='w') as f:
+                f.write(f"{time.time()}\n")

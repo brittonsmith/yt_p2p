@@ -13,8 +13,6 @@ from yt.extensions.p2p.misc import \
     sphere_icom, \
     reunit
 
-from ytree.analysis import add_operation
-
 _dataset_dicts = {}
 def get_dataset_dict(data_dir):
     data_dir = os.path.abspath(data_dir)
@@ -36,8 +34,6 @@ def get_yt_dataset(node, data_dir):
 def yt_dataset(node, data_dir):
     node.ds = get_yt_dataset(node, data_dir)
 
-add_operation("yt_dataset", yt_dataset)
-
 def get_node_sphere(node, ds=None,
                     position_field="position",
                     radius_field="virial_radius",
@@ -56,8 +52,6 @@ def node_sphere(node,
         position_field=position_field,
         radius_field=radius_field,
         radius_factor=radius_factor)
-
-add_operation("node_sphere", node_sphere)
 
 def node_icom(node):
     sphere = get_node_sphere(node)
@@ -78,15 +72,11 @@ def node_icom(node):
     for iax, ax in enumerate("xyz"):
         node[f"icom_all_position_{ax}"] = center[iax]
 
-add_operation("node_icom", node_icom)
-
 def delattrs(node, attrs):
     for attr in attrs:
         delattr(node, attr)
     val = gc.collect()
     mylog.info(f"Collected {val} garbages!")
-
-add_operation("delattrs", delattrs)
 
 def fields_not_assigned(node, fields):
     for field in fields:
@@ -94,8 +84,6 @@ def fields_not_assigned(node, fields):
         if node[field] == default:
             return True
     return False
-
-add_operation("fields_not_assigned", fields_not_assigned)
 
 def add_analysis_fields(a, fields):
     for field, finfo in fields.items():

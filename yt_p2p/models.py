@@ -153,11 +153,21 @@ def find_peaks(ds, bin_field, peak_field, time_index):
     i_peaks.sort()
     return i_peaks
 
+def _specific_thermal_energy(field, data):
+    ftype = field.name[0]
+    return data[ftype, "thermal_energy"]
+
 # Grackle fluid container preparation
 
 def prepare_model(cds, start_time, profile_index, fc=None):
     time_data = cds.data["time"]
     time_index = np.abs(time_data - start_time).argmin()
+
+    if ('data', 'specific_thermal_energy') not in cds.field_list:
+        cds.add_field(('data', 'specific_thermal_energy'),
+                      sampling_type="local",
+                      function=_specific_thermal_energy,
+                      units="erg/g")
 
     efields = ["external_pressure",
                "dark_matter",
@@ -170,6 +180,8 @@ def prepare_model(cds, start_time, profile_index, fc=None):
     external_data = {}
 
     field_list = [field for field in cds.field_list if field[1] != "time"]
+    if ('data', 'specific_thermal_energy') not in field_list:
+        field_list.append(('data', 'specific_thermal_energy'))
     field_data = dict((field, cds.data[field][time_index:, profile_index])
                       for field in field_list)
 

@@ -4,8 +4,8 @@ occured by filtering out halos with a relatively low peak gas density.
 For halos that made it through the filter, I make projections so I
 can inspect manually.
 
-This script has been made obselete by find_target_halos.py, which
-uses merger trees instead of halo catalogs.
+This script has been made obselete by find_target_halos_from_tree.py,
+which uses merger trees instead of halo catalogs.
 """
 
 import h5py

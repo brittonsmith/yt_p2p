@@ -137,19 +137,19 @@ def region_projections(node, fields, weight_field=("gas", "density"),
         decorate_plot(node, p)
         p.save(output_dir + "/" + output_key)
 
-time_last_gc = 0
-def delattrs(node, attrs, time_between_gc=None):
+def delattrs(node, attrs):
     for attr in attrs:
         if hasattr(node, attr):
             delattr(node, attr)
 
-    if time_between_gc is not None:
-        global time_last_gc
-        ctime = time.time()
-        if ctime - time_last_gc > time_between_gc:
-            val = gc.collect()
-            mylog.info(f"Collected {val} garbages!")
-            time_last_gc = ctime
+time_last_gc = time.time()
+def garbage_collect(node, time_between_gc):
+    global time_last_gc
+    ctime = time.time()
+    if ctime - time_last_gc > time_between_gc:
+        val = gc.collect()
+        mylog.info(f"Collected {val} garbages!")
+        time_last_gc = ctime
 
 def fields_not_assigned(node, fields):
     for field in fields:

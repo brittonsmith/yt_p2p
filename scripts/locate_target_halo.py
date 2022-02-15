@@ -3,6 +3,9 @@ I used this to locate the halo in which the metal-enriched collapse
 occured by filtering out halos with a relatively low peak gas density.
 For halos that made it through the filter, I make projections so I
 can inspect manually.
+
+This script has been made obselete by find_target_halos.py, which
+uses merger trees instead of halo catalogs.
 """
 
 import h5py
@@ -44,8 +47,8 @@ if __name__ == "__main__":
     hc.add_callback("sphere", factor=1.)
     hc.add_quantity("max_gas_density")
     hc.add_filter("quantity_value", "max_gas_density", ">", 1e-18, "g/cm**3")
-    hc.add_callback("sphere_projection", ["density", "temperature", "metallicity3"],
-                    weight_field="density", axes="xyz", output_dir="sphere_projections")
-    hc.add_callback("sphere_projection", ["dark_matter_density"],
-                    weight_field="dark_matter_density", axes="xyz", output_dir="sphere_projections")
+    hc.add_callback("sphere_projection", [("gas", "density"), ("gas", "temperature"), ("gas", "metallicity3")],
+                    weight_field=("gas", "density"), axes="xyz", output_dir="sphere_projections")
+    hc.add_callback("sphere_particle_projection", [("all", "particle_mass")],
+                    axes="xyz", output_dir="sphere_projections")
     hc.create(dynamic=False)

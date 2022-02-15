@@ -4,11 +4,16 @@ Merger tree analysis operations.
 
 import gc
 import os
+import time
 import yaml
 
-from yt.loaders import load as yt_load
+from yt import \
+    ProjectionPlot, \
+    ParticleProjectionPlot, \
+    load as yt_load
 from yt.utilities.logger import ytLogger as mylog
 
+from yt.extensions.p2p import add_p2p_fields
 from yt.extensions.p2p.misc import \
     sphere_icom, \
     reunit
@@ -32,7 +37,9 @@ def get_yt_dataset(node, data_dir):
     return yt_load(dsfn)
 
 def yt_dataset(node, data_dir):
-    node.ds = get_yt_dataset(node, data_dir)
+    if not hasattr(node, "ds"):
+        node.ds = get_yt_dataset(node, data_dir)
+        add_p2p_fields(node.ds)
 
 def get_node_sphere(node, ds=None,
                     position_field="position",
@@ -49,6 +56,7 @@ def node_sphere(node,
                 radius_field="virial_radius",
                 radius_factor=1.0):
     node.sphere = get_node_sphere(
+        node,
         position_field=position_field,
         radius_field=radius_field,
         radius_factor=radius_factor)
@@ -72,11 +80,76 @@ def node_icom(node):
     for iax, ax in enumerate("xyz"):
         node[f"icom_all_position_{ax}"] = center[iax]
 
-def delattrs(node, attrs):
+def decorate_plot(node, p):
+    p.set_axes_unit("pc")
+    title = f"t = {node['time'].to('Myr'):.2f}, z = {node['redshift']:.2f}, M = {node['mass'].to('Msun'):.2g}"
+    p.annotate_title(title)
+
+def region_projections(node, fields, weight_field=("gas", "density"),
+                       axes="xyz", particle_projections=True,
+                       output_format="ds", output_dir="."):
+
+    ds = node.ds
+
+    sphere = node.sphere
+    left  = sphere.center - 1.05 * sphere.radius
+    right = sphere.center + 1.05 * sphere.radius
+    region = ds.box(left, right)
+
+    if output_format == "ds":
+        output_key = str(ds)
+    elif output_format == "node":
+        output_key = f"node_{node.uid}"
+    else:
+        raise ValueError(f"Bad {output_format=}.")
+
+    for ax in axes:
+        do_fields = \
+            [field for field in fields
+             if not os.path.exists(
+                 os.path.join(output_dir, f"{output_key}_Projection_{ax}_{field[1]}_{weight_field[1]}.png"))]
+
+        if do_fields:
+            p = ProjectionPlot(
+                ds, ax, do_fields, weight_field=weight_field,
+                center=sphere.center, width=2*sphere.radius,
+                data_source=region)
+            for field, cmap in fields.items():
+                p.set_cmap(field, cmap)
+            decorate_plot(node, p)
+            p.save(output_dir + "/" + output_key)
+
+    if not particle_projections:
+        return
+
+    do_axes = \
+        [ax for ax in axes
+         if not os.path.exists(
+             os.path.join(output_dir, f"{output_key}_Particle_{ax}_particle_mass.png"))]
+
+    for ax in do_axes:
+        p = ParticleProjectionPlot(
+            ds, ax, ("all", "particle_mass"),
+            center=sphere.center, width=2*sphere.radius,
+            data_source=region)
+        p.set_unit(("all", "particle_mass"), "Msun")
+        p.set_cmap(("all", "particle_mass"), "turbo")
+        decorate_plot(node, p)
+        p.save(output_dir + "/" + output_key)
+
+time_last_gc = 0
+def delattrs(node, attrs, time_between_gc=None):
     for attr in attrs:
-        delattr(node, attr)
-    val = gc.collect()
-    mylog.info(f"Collected {val} garbages!")
+        if hasattr(node, attr):
+            delattr(node, attr)
+
+    if time_between_gc is not None:
+        global time_last_gc
+        ctime = time.time()
+        if ctime - time_last_gc > time_between_gc:
+            val = gc.collect()
+            mylog.info(f"Collected {val} garbages!")
+            time_last_gc = ctime
 
 def fields_not_assigned(node, fields):
     for field in fields:

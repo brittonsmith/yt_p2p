@@ -40,6 +40,24 @@ def sphere_projection(halo, fields, weight_field=None, axes="xyz", output_dir=".
         plot.save(os.path.join(output_dir, f"halo_{int(halo.quantities['particle_identifier']):06d}"))
 add_callback("sphere_projection", sphere_projection)
 
+def sphere_particle_projection(halo, fields, axes="xyz", output_dir=".",
+                               sphere=None):
+    if sphere is None:
+        sphere = getattr(halo, 'data_object')
+    if sphere is None:
+        raise RuntimeError('No sphere provided.')
+
+    yt.mylog.info(f"Projecting halo {int(halo.quantities['particle_identifier']):d}.")
+    for axis in axes:
+        plot = yt.ParticleProjectionPlot(halo.halo_catalog.data_ds, axis, fields,
+                                         data_source=sphere,
+                                         center=sphere.center,
+                                         width=(2*sphere.radius))
+        plot.set_axes_unit("pc")
+        plot.annotate_title(f"M = {halo.quantities['particle_mass'].in_units('Msun')}.")
+        plot.save(os.path.join(output_dir, f"halo_{int(halo.quantities['particle_identifier']):06d}"))
+add_callback("sphere_particle_projection", sphere_particle_projection)
+
 def iterative_center_of_mass(halo, inner_radius,
                              radius_field="virial_radius", step_ratio=0.9,
                              use_gas=True, use_particles=False):

@@ -54,7 +54,7 @@ if __name__ == "__main__":
 
             diff = np.abs(hmass - nmass) / max(hmass, nmass)
             yt.mylog.info(f'Diff: {diff}.')
-            if diff < 0.05:
+            if diff < 0.25:
                 file_map.append(
                     {'filename': str(fns[i]),
                      'Snap_idx': int(node['Snap_idx'])})

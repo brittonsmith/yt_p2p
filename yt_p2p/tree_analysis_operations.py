@@ -31,15 +31,21 @@ def get_dataset_dict(data_dir):
 
     return _dataset_dicts[data_dir]
 
-def get_yt_dataset(node, data_dir):
+def get_dataset_filename(node, data_dir):
     ddict = get_dataset_dict(data_dir)
-    dsfn = os.path.join(data_dir, ddict[int(node['Snap_idx'])])
+    return os.path.join(data_dir, ddict[int(node['Snap_idx'])])
+
+def get_yt_dataset(node, data_dir):
+    dsfn = get_dataset_filename(node, data_dir)
     return yt_load(dsfn)
 
 def yt_dataset(node, data_dir):
-    if not hasattr(node, "ds"):
-        node.ds = get_yt_dataset(node, data_dir)
-        add_p2p_fields(node.ds)
+    if hasattr(node, "ds"):
+        dsfn = get_dataset_filename(node, data_dir)
+        if os.path.basename(dsfn) == node.ds.basename:
+            return
+    node.ds = get_yt_dataset(node, data_dir)
+    add_p2p_fields(node.ds)
 
 def get_node_sphere(node, ds=None,
                     position_field="position",

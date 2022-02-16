@@ -52,10 +52,18 @@ if __name__ == "__main__":
     ap.add_operation(fields_not_assigned, afields)
     ap.add_operation(yt_dataset, data_dir)
     ap.add_operation(node_icom)
-    ap.add_operation(delattrs, ["ds"])
-    ap.add_operation(garbage_collect, 60)
+    ap.add_operation(garbage_collect, 60, always_do=True)
 
+    my_ds = None
     for node in parallel_nodes(trees, group=group, save_every=1,
                                njobs=(1, 0), dynamic=(False, True)):
 
-        result = ap.process_target(node)
+        if my_ds is not None:
+            node.ds = my_ds
+        del my_ds
+
+        ap.process_target(node)
+
+        if hasattr(node, "ds"):
+            my_ds = node.ds
+            del node.ds

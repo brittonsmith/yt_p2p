@@ -31,9 +31,25 @@ def get_dataset_dict(data_dir):
 
     return _dataset_dicts[data_dir]
 
+_es_dict = {}
 def get_dataset_filename(node, data_dir):
-    ddict = get_dataset_dict(data_dir)
-    return os.path.join(data_dir, ddict[int(node['Snap_idx'])])
+    if "Snap_idx" in node.arbor.field_list:
+        ddict = get_dataset_dict(data_dir)
+        dsfn = ddict.get(int(node['Snap_idx']), None)
+        if dsfn is not None:
+            return os.path.join(data_dir, dsfn)
+
+    if os.path.exists(os.path.join(data_dir, "simulation.h5")):
+        if data_dir not in _es_dict:
+            _es_dict[data_dir] = yt_load(os.path.join(data_dir, "simulation.h5"))
+        es = _es_dict[data_dir]
+
+        efns = es.data["filename"].astype(str)
+        etimes = reunit(node.arbor, es.data["time"].to("Myr"), "Myr")
+        ifn = np.abs(etimes - node["time"]).argmin()
+        return os.path.join(data_dir, efns[ifn])
+
+    raise RuntimeError(f"Could not associate {node} with a dataset.")
 
 def get_yt_dataset(node, data_dir):
     dsfn = get_dataset_filename(node, data_dir)
@@ -49,21 +65,25 @@ def yt_dataset(node, data_dir):
 
 def get_node_sphere(node, ds=None,
                     position_field="position",
+                    radius=None,
                     radius_field="virial_radius",
                     radius_factor=1.0):
     if ds is None:
         ds = node.ds
     center = reunit(ds, node[position_field], "unitary")
-    radius = radius_factor * reunit(ds, node[radius_field], "unitary")
+    if radius is None:
+        radius = radius_factor * reunit(ds, node[radius_field], "unitary")
     return ds.sphere(center, radius)
 
 def node_sphere(node,
                 position_field="position",
+                radius=None,
                 radius_field="virial_radius",
                 radius_factor=1.0):
     node.sphere = get_node_sphere(
         node,
         position_field=position_field,
+        radius=radius,
         radius_field=radius_field,
         radius_factor=radius_factor)
 

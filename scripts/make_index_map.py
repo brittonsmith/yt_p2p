@@ -11,24 +11,29 @@ import yt
 import ytree
 
 if __name__ == "__main__":
-    a = ytree.load(sys.argv[1])
-    tree = a[0]
-
     es = yt.load('simulation.h5')
     fns = es.data['filename'].astype(str)[::-1]
     redshifts = es.data['redshift'][::-1]
+
+    a = ytree.load(sys.argv[1])
+    idx_min = np.array([t['forest', 'Snap_idx'].min() for t in a])
+    tree = a[np.argmin(idx_min)]
+
+    tidx = tree['forest', 'Snap_idx']
+    uidx = np.flip(np.sort(np.unique(tidx)))
+    my_nodes = [tree.get_node('forest', np.where(tidx == i)[0][0]) for i in uidx]
 
     map_file = 'simulation.yaml'
     if os.path.exists(map_file):
         with open(map_file, 'r') as f:
             file_map = yaml.load(f, Loader=yaml.FullLoader)
         file_map.reverse()
-        istart = np.where(tree['prog', 'Snap_idx'].astype(int) == file_map[-1]['Snap_idx'])[0][0] + 1
+        istart = np.where(uidx == file_map[-1]['Snap_idx'])[0][0] + 1
     else:
         file_map = []
         istart = 0
 
-    for inode, node in enumerate(tree['prog']):
+    for inode, node in enumerate(my_nodes):
         if inode < istart:
             continue
         if node['phantom']:

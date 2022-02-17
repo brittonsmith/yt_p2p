@@ -43,11 +43,11 @@ if __name__ == "__main__":
 
     m_min = a.quan(1e3, 'Msun')
     trees = list(a[:])
-    group = "forest"
+    group = "prog"
 
     data_dir = '.'
     ap = AnalysisPipeline()
-    ap.add_operation(minimum_mass, m_min)
+    # ap.add_operation(minimum_mass, m_min)
     # ap.add_operation(in_region)
     ap.add_operation(fields_not_assigned, afields)
     ap.add_operation(yt_dataset, data_dir)
@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
         if my_ds is not None:
             node.ds = my_ds
-        del my_ds
+        my_ds = None
 
         ap.process_target(node)
 

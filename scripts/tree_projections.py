@@ -22,6 +22,7 @@ from yt.extensions.p2p.tree_analysis_operations import \
     delattrs, \
     garbage_collect, \
     region_projections, \
+    region_projections_not_done, \
     node_sphere
 
 pfields = {
@@ -36,6 +37,9 @@ def all_projections(ap, a, field):
     if f"{pos_field}_x" not in a.field_list:
         return
     a.add_vector_field(pos_field)
+
+    ap.add_operation(region_projections_not_done,
+                     pfields, output_dir=f"{field}_projections")
     ap.add_operation(node_sphere, position_field=pos_field)
     ap.add_operation(region_projections,
                      pfields, output_dir=f"{field}_projections")
@@ -50,12 +54,12 @@ if __name__ == "__main__":
 
     for tree in a:
         ap = AnalysisPipeline(output_dir=os.path.join(output_dir, f"node_{tree.uid}"))
-        ap.add_operation(yt_dataset, data_dir)
+        ap.add_operation(yt_dataset, data_dir, add_fields=False)
 
         for field in cfields:
             ap.add_recipe(all_projections, a, field)
-        ap.add_operation(delattrs, ["ds"])
-        ap.add_operation(garbage_collect, 60)    
+        ap.add_operation(delattrs, ["ds"], always_do=True)
+        ap.add_operation(garbage_collect, 60, always_do=True)
 
-        for node in ytree.parallel_tree_nodes(tree, group="prog"):
+        for node in ytree.parallel_tree_nodes(tree, group="prog", dynamic=False):
             ap.process_target(node)

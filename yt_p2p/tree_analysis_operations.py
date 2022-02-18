@@ -55,13 +55,14 @@ def get_yt_dataset(node, data_dir):
     dsfn = get_dataset_filename(node, data_dir)
     return yt_load(dsfn)
 
-def yt_dataset(node, data_dir):
+def yt_dataset(node, data_dir, add_fields=True):
     if hasattr(node, "ds"):
         dsfn = get_dataset_filename(node, data_dir)
         if os.path.basename(dsfn) == node.ds.basename:
             return
     node.ds = get_yt_dataset(node, data_dir)
-    add_p2p_fields(node.ds)
+    if add_fields:
+        add_p2p_fields(node.ds)
 
 def get_node_sphere(node, ds=None,
                     position_field="position",
@@ -111,6 +112,64 @@ def decorate_plot(node, p):
     title = f"t = {node['time'].to('Myr'):.2f}, z = {node['redshift']:.2f}, M = {node['mass'].to('Msun'):.2g}"
     p.annotate_title(title)
 
+def get_projection_filename(
+        node, axis, field=None, weight_field=("gas", "density"),
+        particle_projections=False,
+        output_format="ds", output_dir="."):
+
+    output_key = get_output_key(node, node.ds, output_format)
+    if field is not None:
+        return os.path.join(output_dir, f"{output_key}_Projection_{axis}_{field[1]}_{weight_field[1]}.png")
+    if particle_projections:
+        return os.path.join(output_dir, f"{output_key}_Particle_{axis}_particle_mass.png")
+
+def get_region_projection_filenames(
+        node, axes="xyz", fields=None, weight_field=("gas", "density"),
+        particle_projections=False,
+        output_format="ds", output_dir="."):
+
+    fns = []
+    if fields is not None:
+        my_fns = [
+            get_projection_filename(
+                node, ax, field=field, weight_field=weight_field,
+                output_format=output_format, output_dir=output_dir)
+            for field in fields
+            for ax in axes]
+        fns.extend(my_fns)
+
+    if particle_projections:
+        my_fns = [
+            get_projection_filename(
+                node, ax, particle_projections=True,
+                output_format=output_format, output_dir=output_dir)
+            for ax in axes]
+        fns.extend(my_fns)
+
+    return fns
+
+def region_projections_not_done(
+        node, fields, weight_field=("gas", "density"),
+        axes="xyz", particle_projections=True,
+        output_format="ds", output_dir="."):
+
+    my_fns = [fn for fn in
+              get_region_projection_filenames(
+                  node, axes=axes, fields=fields, weight_field=weight_field,
+                  particle_projections=particle_projections,
+                  output_format=output_format, output_dir=output_dir)
+              if not os.path.exists(fn)]
+    return len(my_fns)
+
+def get_output_key(node, ds, output_format):
+    if output_format == "ds":
+        output_key = str(ds)
+    elif output_format == "node":
+        output_key = f"node_{node.uid}"
+    else:
+        raise ValueError(f"Bad {output_format=}.")
+    return output_key
+
 def region_projections(node, fields, weight_field=("gas", "density"),
                        axes="xyz", particle_projections=True,
                        output_format="ds", output_dir="."):
@@ -122,20 +181,18 @@ def region_projections(node, fields, weight_field=("gas", "density"),
     right = sphere.center + 1.05 * sphere.radius
     region = ds.box(left, right)
 
-    if output_format == "ds":
-        output_key = str(ds)
-    elif output_format == "node":
-        output_key = f"node_{node.uid}"
-    else:
-        raise ValueError(f"Bad {output_format=}.")
+    output_key = get_output_key(node, ds, output_format)
 
     for ax in axes:
         do_fields = \
             [field for field in fields
              if not os.path.exists(
-                 os.path.join(output_dir, f"{output_key}_Projection_{ax}_{field[1]}_{weight_field[1]}.png"))]
+                     get_projection_filename(
+                         node, ax, field=field, weight_field=weight_field,
+                         output_format="ds", output_dir="."))]
 
         if do_fields:
+            add_p2p_fields(ds)
             p = ProjectionPlot(
                 ds, ax, do_fields, weight_field=weight_field,
                 center=sphere.center, width=2*sphere.radius,
@@ -151,7 +208,9 @@ def region_projections(node, fields, weight_field=("gas", "density"),
     do_axes = \
         [ax for ax in axes
          if not os.path.exists(
-             os.path.join(output_dir, f"{output_key}_Particle_{ax}_particle_mass.png"))]
+                 get_projection_filename(
+                     node, ax, particle_projections=True,
+                     output_format="ds", output_dir="."))]
 
     for ax in do_axes:
         p = ParticleProjectionPlot(

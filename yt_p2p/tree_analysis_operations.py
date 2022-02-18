@@ -189,7 +189,7 @@ def region_projections(node, fields, weight_field=("gas", "density"),
              if not os.path.exists(
                      get_projection_filename(
                          node, ax, field=field, weight_field=weight_field,
-                         output_format="ds", output_dir="."))]
+                         output_format=output_format, output_dir=output_dir))]
 
         if do_fields:
             add_p2p_fields(ds)
@@ -210,7 +210,7 @@ def region_projections(node, fields, weight_field=("gas", "density"),
          if not os.path.exists(
                  get_projection_filename(
                      node, ax, particle_projections=True,
-                     output_format="ds", output_dir="."))]
+                     output_format=output_format, output_dir=output_dir))]
 
     for ax in do_axes:
         p = ParticleProjectionPlot(

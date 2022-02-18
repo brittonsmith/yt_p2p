@@ -84,7 +84,7 @@ def add_p2p_fields(ds):
     # use the value of solar metallicity in the dataset
     ds.unit_registry.modify('Zsun', ds.parameters['SolarMetalFractionByMass'])
 
-    if ("gas", "metallicity3") in ds.field_info:
+    if ("gas", "metallicity3") in ds.derived_field_list:
         return
 
     add_p2p_field(ds, ("gas", "metallicity3"),

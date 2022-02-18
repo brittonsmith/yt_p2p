@@ -61,5 +61,5 @@ if __name__ == "__main__":
         ap.add_operation(delattrs, ["ds"], always_do=True)
         ap.add_operation(garbage_collect, 60, always_do=True)
 
-        for node in ytree.parallel_tree_nodes(tree, group="prog", dynamic=False):
+        for node in ytree.parallel_tree_nodes(tree, group="prog", dynamic=True):
             ap.process_target(node)

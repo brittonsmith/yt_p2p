@@ -49,7 +49,11 @@ if __name__ == "__main__":
             hdsfn = 'rockstar_halos/halos_%s.0.bin' % os.path.basename(fns[i])
             hds = yt.load(hdsfn)
 
-            hid = hds.r['all', 'particle_identifier'].astype(int) == int(node['halo_id'])
+            try:
+                hid = hds.r['all', 'particle_identifier'].astype(int) == int(node['halo_id'])
+            except:
+                continue
+
             if not hid.any():
                 continue
 

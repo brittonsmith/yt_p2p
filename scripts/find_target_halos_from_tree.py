@@ -55,7 +55,7 @@ if __name__ == "__main__":
 
     trees = list(a[:])
     ds = None
-    for tree in ytree.parallel_trees(trees, dynamic=False, save_every=False):
+    for tree in ytree.parallel_trees(trees, dynamic=True, save_every=False):
         if ds is not None:
             tree.ds = ds
 

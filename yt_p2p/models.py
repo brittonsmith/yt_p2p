@@ -172,6 +172,7 @@ def prepare_model(cds, start_time, profile_index, fc=None):
     efields = ["external_pressure",
                "dark_matter",
                "metallicity",
+               "turbulent_velocity",
                "H2_p0_dissociation_rate",
                "H_p0_ionization_rate",
                "He_p0_ionization_rate",

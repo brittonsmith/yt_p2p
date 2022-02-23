@@ -3,6 +3,7 @@ Merger tree analysis operations.
 """
 
 import gc
+import numpy as np
 import os
 import time
 import yaml

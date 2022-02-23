@@ -33,6 +33,7 @@ if __name__ == "__main__":
         file_map = []
         istart = 0
 
+    max_offset = fns.size - uidx.max()
     for inode, node in enumerate(my_nodes):
         if inode < istart:
             continue
@@ -44,7 +45,7 @@ if __name__ == "__main__":
         else:
             ifile = 0
 
-        for i in range(ifile, min(ifile+5, fns.size)):
+        for i in range(ifile, min(ifile+max_offset, fns.size)):
             hdsfn = 'rockstar_halos/halos_%s.0.bin' % os.path.basename(fns[i])
             hds = yt.load(hdsfn)
 
@@ -59,7 +60,7 @@ if __name__ == "__main__":
 
             diff = np.abs(hmass - nmass) / max(hmass, nmass)
             yt.mylog.info(f'Diff: {diff}.')
-            if diff < 0.25:
+            if diff < 0.5:
                 file_map.append(
                     {'filename': str(fns[i]),
                      'Snap_idx': int(node['Snap_idx'])})

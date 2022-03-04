@@ -40,7 +40,7 @@ def all_projections(ap, a, field):
 
     ap.add_operation(region_projections_not_done,
                      pfields, output_dir=f"{field}_projections")
-    ap.add_operation(node_sphere, position_field=pos_field)
+    ap.add_operation(node_sphere, center_field=pos_field)
     ap.add_operation(region_projections,
                      pfields, output_dir=f"{field}_projections")
     ap.add_operation(delattrs, ["sphere"])

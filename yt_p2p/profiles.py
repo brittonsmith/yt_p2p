@@ -1,13 +1,11 @@
 from more_itertools import always_iterable
 import numpy as np
 
-from yt.data_objects.profiles import \
-    create_profile
-from yt.units.yt_array import \
-    YTArray
+from unyt import unyt_array
+from yt.data_objects.profiles import create_profile
 
 def my_profile(dobj, bin_fields, profile_fields, n_bins=None, extrema=None, logs=None, units=None,
-               weight_field="cell_mass", accumulation=False, fractional=False, bin_density=None):
+               weight_field=("gas", "cell_mass"), accumulation=False, fractional=False, bin_density=None):
     r"""
     Create 1, 2, or 3D profiles.
 
@@ -70,7 +68,7 @@ def my_profile(dobj, bin_fields, profile_fields, n_bins=None, extrema=None, logs
             extrema = {}
         if len(extrema) != len(bin_fields):
             exs = dobj.quantities.extrema(bin_fields)
-            if isinstance(exs, YTArray):
+            if isinstance(exs, unyt_array):
                 exs = [exs]
 
         for bin_field, ex in zip(bin_fields, exs):

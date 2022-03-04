@@ -14,10 +14,11 @@ from yt import \
     load as yt_load
 from yt.utilities.logger import ytLogger as mylog
 
-from yt.extensions.p2p import add_p2p_fields
+from yt.extensions.p2p.fields import add_p2p_fields
 from yt.extensions.p2p.misc import \
     sphere_icom, \
     reunit
+from yt.extensions.p2p.profiles import my_profile
 
 _dataset_dicts = {}
 def get_dataset_dict(data_dir):
@@ -66,25 +67,25 @@ def yt_dataset(node, data_dir, add_fields=True):
         add_p2p_fields(node.ds)
 
 def get_node_sphere(node, ds=None,
-                    position_field="position",
+                    center_field="position",
                     radius=None,
                     radius_field="virial_radius",
                     radius_factor=1.0):
     if ds is None:
         ds = node.ds
-    center = reunit(ds, node[position_field], "unitary")
+    center = reunit(ds, node[center_field], "unitary")
     if radius is None:
         radius = radius_factor * reunit(ds, node[radius_field], "unitary")
     return ds.sphere(center, radius)
 
 def node_sphere(node,
-                position_field="position",
+                center_field="position",
                 radius=None,
                 radius_field="virial_radius",
                 radius_factor=1.0):
     node.sphere = get_node_sphere(
         node,
-        position_field=position_field,
+        center_field=center_field,
         radius=radius,
         radius_field=radius_field,
         radius_factor=radius_factor)
@@ -107,6 +108,46 @@ def node_icom(node):
     center.convert_to_units("unitary")
     for iax, ax in enumerate("xyz"):
         node[f"icom_all_position_{ax}"] = center[iax]
+
+def node_profile(node, bin_fields, profile_fields, weight_field,
+                 data_object="sphere", profile_kwargs=None, output_dir=".",):
+
+    nd = len(bin_fields)
+    for field in bin_fields + profile_fields + [weight_field]:
+        if field is not None and not isinstance(field, tuple):
+            raise ValueError(f"Field {field} must be a tuple.")
+
+    if weight_field is None:
+        wname = "None"
+    else:
+        wname = weight_field[1]
+
+    fpre = f"{str(node.ds)}_{nd}D_profile"
+    fkey = "_".join([field[1] for field in bin_fields]) + f"_{wname}"
+    fn = f"{fpre}_{fkey}.h5"
+    ofn = os.path.join(output_dir, fn)
+    if os.path.exists(ofn):
+        return
+
+    mylog.info(f"Making profiles for {node} with {node.ds}: {fn}.")
+
+    data_source = getattr(node, data_object, None)
+    if data_source is None:
+        raise ValueError("Cannot find node attribute {data_object}.")
+
+    if profile_kwargs is None:
+        profile_kwargs = {}
+    profile_kwargs["weight_field"] = weight_field
+
+    profile = my_profile(
+        data_source,
+        bin_fields,
+        profile_fields,
+        **profile_kwargs,
+    )
+
+    profile.save_as_dataset(filename=ofn)
+    del profile
 
 def decorate_plot(node, p):
     p.set_axes_unit("pc")

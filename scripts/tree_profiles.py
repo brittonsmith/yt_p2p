@@ -47,6 +47,7 @@ def all_profiles(ap, output_dir="."):
         "vortical_time": {"units": "yr", "log": True},
         "cooling_time": {"units": "yr", "log": True},
         "dynamical_time": {"units": "yr", "log": True},
+        "total_dynamical_time": {"units": "yr", "log": True},
     }
     my_fields = [("gas", field) for field in _fields]
 

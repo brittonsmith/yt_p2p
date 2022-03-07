@@ -18,7 +18,7 @@ from yt.extensions.p2p.plots import \
 
 from grid_figure import GridFigure
 
-def plot_velocity_profiles(data_dir, halo_id):
+def plot_velocity_profiles(data_dir, file_prefix):
     my_fig = GridFigure(
         1, 1, figsize=(6, 4.5),
         top_buffer = 0.14, bottom_buffer = 0.12,
@@ -37,28 +37,28 @@ def plot_velocity_profiles(data_dir, halo_id):
               "sound_speed"]
 
     for i, field in enumerate(fields):
-        filename = os.path.join(data_dir, "%s_%06d.h5" % (field, halo_id))
+        filename = os.path.join(data_dir, f"{file_prefix}_2D_profile_radius_{field}_None.h5")
         plot_profile_distribution(
             my_axes, filename, 'cell_mass',
-            x_units="pc", y_units="km/s", alpha_scale=0.7,
+            x_units="pc", y_units='km/s', alpha_scale=0.7,
             pkwargs=dict(color=colors[i], linewidth=1))
 
-    profile_dir = os.path.join(os.path.dirname(data_dir), "profiles")
-    pds = yt.load(
-        os.path.join(profile_dir, "profiles_%06d.h5" % halo_id))
+    fn = os.path.join(data_dir, f"{file_prefix}_1D_profile_radius_cell_mass.h5")
+    pds = yt.load(fn)
     pradius = pds.profile.x.to("pc")
     vsigma = pds.profile.standard_deviation['data', 'velocity_magnitude'].to("km/s")
     my_axes.plot(pradius[vsigma > 0], vsigma[vsigma > 0], alpha=0.9,
                  linewidth=1, color=colors[4], zorder=998)
 
-    field = "cell_mass"
-    mds = yt.load(os.path.join(data_dir, "%s_%06d.h5" % (field, halo_id)))
+    field = "matter_mass"
+    fn = os.path.join(data_dir, f"{file_prefix}_1D_profile_radius_None.h5")
+    mds = yt.load(fn)
     radius = mds.profile.x.to("pc")
     mass = mds.profile[field]
     dfil = mass > 0
     v_sp = np.sqrt(G * mass[dfil].cumsum() / radius[dfil]).to("km/s")
     my_axes.plot(radius[dfil], v_sp, alpha=0.9, linewidth=1,
-                 color=colors[5], zorder=999)
+                 color=colors[5], zorder=997)
 
     ylim = (-5, 13)
     ymajor = np.arange(-5, 16, 5.)
@@ -70,7 +70,7 @@ def plot_velocity_profiles(data_dir, halo_id):
                     linewidth=1, alpha=0.2)
     ty = mirror_yticks(my_axes, ylim, ymajor, yminor=yminor)
 
-    xlim = (2e-6, 2e2)
+    xlim = (1e-1, 2e2)
     tx = twin_unit_axes(
         my_axes, xlim, "r",
         "pc", top_units="AU")
@@ -85,6 +85,5 @@ def plot_velocity_profiles(data_dir, halo_id):
     pyplot.savefig("figures/velocity_profiles.pdf")
 
 if __name__ == "__main__":
-    data_dir = "../halo_catalogs/profile_catalogs/DD0560/velocity_profiles"
-    halo_id = 41732
-    plot_velocity_profiles(data_dir, halo_id)
+    data_dir = "minihalo_analysis/node_7254372/profiles"
+    plot_velocity_profiles(data_dir, "DD0295")

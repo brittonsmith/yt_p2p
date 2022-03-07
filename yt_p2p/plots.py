@@ -163,7 +163,7 @@ def plot_phase(filename, field, units,
 
 def get10s(lim):
     bds = np.ceil(np.log10(lim))
-    return np.logspace(bds[0], bds[1], bds[1]-bds[0]+1)
+    return np.logspace(bds[0], bds[1], int(bds[1]-bds[0]+1))
 
 def draw_major_grid(my_axes, axis, ticks, **pkwargs):
     if not pkwargs:

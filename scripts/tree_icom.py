@@ -43,11 +43,11 @@ if __name__ == "__main__":
 
     m_min = a.quan(1e3, 'Msun')
     trees = list(a[:])
-    group = "prog"
+    group = "forest"
 
-    data_dir = '.'
+    data_dir = '/disk12/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue'
     ap = AnalysisPipeline()
-    # ap.add_operation(minimum_mass, m_min)
+    ap.add_operation(minimum_mass, m_min)
     # ap.add_operation(in_region)
     ap.add_operation(fields_not_assigned, afields)
     ap.add_operation(yt_dataset, data_dir)
@@ -62,6 +62,7 @@ if __name__ == "__main__":
             node.ds = my_ds
         my_ds = None
 
+        yt.mylog.info(f"Doing {node}.")
         ap.process_target(node)
 
         if hasattr(node, "ds"):

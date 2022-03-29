@@ -264,6 +264,33 @@ def region_projections(node, fields, weight_field=("gas", "density"),
         decorate_plot(node, p)
         p.save(output_dir + "/" + output_key)
 
+def sphere_radial_profiles(node, fields, weight_field=None, output_dir=".",
+                           profile_kwargs=None):
+    if weight_field is None:
+        weight_name = "None"
+    else:
+        if not isinstance(weight_field, tuple) and len(weight_field) != 2:
+            raise ValueError("weight_field must be a tuple of length 2.")
+        weight_name = weight_field[1]
+
+    fn = os.path.join(output_dir, f"{str(node.ds)}_profile_weight_field_{weight_name}.h5")
+    if os.path.exists(fn):
+        return
+
+    pkwargs = {"accumulation": False, "bin_density": 20}
+    if profile_kwargs is not None:
+        pkwargs.update(profile_kwargs)
+
+    data_source = node.sphere
+    profile = my_profile(
+        data_source,
+        ("index", "radius"), fields,
+        units={("index", "radius"): "pc"},
+        weight_field=weight_field,
+        **pkwargs)
+    profile.save_as_dataset(filename=fn)
+    del profile
+
 def delattrs(node, attrs):
     for attr in attrs:
         if hasattr(node, attr):
@@ -284,6 +311,19 @@ def fields_not_assigned(node, fields):
         if node[field] == default:
             return True
     return False
+
+def get_progenitor_line(node):
+    """
+    Get line of nodes that pass through this node to the root.
+
+    For nodes from earlier in time, take the main progenitor line.
+    After this node, that the descendents.
+    """
+
+    node = list(node.get_leaf_nodes(selector="prog"))[0]
+    while node is not None:
+        yield node
+        node = node.descendent
 
 def add_analysis_fields(a, fields):
     for field, finfo in fields.items():

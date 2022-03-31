@@ -78,17 +78,38 @@ def get_node_sphere(node, ds=None,
         radius = radius_factor * reunit(ds, node[radius_field], "unitary")
     return ds.sphere(center, radius)
 
-def node_sphere(node,
+def setsp(node, value):
+    node._sphere = value
+
+def delsp(node):
+    try:
+        del node._sphere
+        del node._sphere_center
+        del node._sphere_radius
+    except AttributeError:
+        pass
+
+def getsp(node):
+    if node._sphere is None:
+        node._sphere = node.ds.sphere(node._sphere_center, node._sphere_radius)
+    return node._sphere
+
+def node_sphere(node, ds=None,
                 center_field="position",
                 radius=None,
                 radius_field="virial_radius",
                 radius_factor=1.0):
-    node.sphere = get_node_sphere(
-        node,
-        center_field=center_field,
-        radius=radius,
-        radius_field=radius_field,
-        radius_factor=radius_factor)
+
+    if ds is None:
+        ds = node.ds
+    center = reunit(ds, node[center_field], "unitary")
+    if radius is None:
+        radius = radius_factor * reunit(ds, node[radius_field], "unitary")
+
+    node._sphere = None
+    node._sphere_center = center
+    node._sphere_radius = radius
+    node.__class__.sphere = property(fget=getsp, fset=setsp, fdel=delsp)
 
 def node_icom(node):
     sphere = get_node_sphere(node)
@@ -277,6 +298,8 @@ def sphere_radial_profiles(node, fields, weight_field=None, output_dir=".",
     if os.path.exists(fn):
         return
 
+    add_p2p_fields(node.ds)
+
     pkwargs = {"accumulation": False, "bin_density": 20}
     if profile_kwargs is not None:
         pkwargs.update(profile_kwargs)
@@ -293,8 +316,10 @@ def sphere_radial_profiles(node, fields, weight_field=None, output_dir=".",
 
 def delattrs(node, attrs):
     for attr in attrs:
-        if hasattr(node, attr):
+        try:
             delattr(node, attr)
+        except AttributeError:
+            pass
 
 time_last_gc = time.time()
 def garbage_collect(node, time_between_gc):

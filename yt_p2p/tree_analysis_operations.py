@@ -57,12 +57,34 @@ def get_yt_dataset(node, data_dir):
     dsfn = get_dataset_filename(node, data_dir)
     return yt_load(dsfn)
 
+def _setds(node, value):
+    node._ds = value
+
+def _delds(node):
+    try:
+        del node._ds
+        del node._ds_filename
+    except AttributeError:
+        pass
+
+def _getds(node):
+    if node._ds is None:
+        node._ds = yt_load(node._ds_filename)
+    return node._ds
+
 def yt_dataset(node, data_dir, add_fields=True):
-    if hasattr(node, "ds"):
-        dsfn = get_dataset_filename(node, data_dir)
-        if os.path.basename(dsfn) == node.ds.basename:
-            return
-    node.ds = get_yt_dataset(node, data_dir)
+    node._ds_filename = get_dataset_filename(node, data_dir)
+
+    # If we already have one, check it's the right one.
+    ds = getattr(node, "_ds", None)
+    if ds is not None:
+        if os.path.basename(node._ds_filename) != ds.basename:
+            node._ds = None
+    else:
+        node._ds = None
+
+    node.__class__.ds = property(fget=_getds, fset=_setds, fdel=_delds)
+
     if add_fields:
         add_p2p_fields(node.ds)
 
@@ -78,20 +100,30 @@ def get_node_sphere(node, ds=None,
         radius = radius_factor * reunit(ds, node[radius_field], "unitary")
     return ds.sphere(center, radius)
 
-def setsp(node, value):
+def _setsp(node, value):
     node._sphere = value
 
-def delsp(node):
+def _delsp(node):
     try:
         del node._sphere
         del node._sphere_center
         del node._sphere_radius
+        del node._sphere_ds
     except AttributeError:
         pass
 
-def getsp(node):
-    if node._sphere is None:
-        node._sphere = node.ds.sphere(node._sphere_center, node._sphere_radius)
+def _getsp(node):
+    if node._sphere is not None:
+        return node._sphere
+
+    if node._sphere_ds is None:
+        ds = node.ds
+    else:
+        ds = node._sphere_ds
+
+    center = reunit(ds, node._sphere_center, "unitary")
+    radius = reunit(ds, node._sphere_radius, "unitary")
+    node._sphere = ds.sphere(center, radius)
     return node._sphere
 
 def node_sphere(node, ds=None,
@@ -100,16 +132,13 @@ def node_sphere(node, ds=None,
                 radius_field="virial_radius",
                 radius_factor=1.0):
 
-    if ds is None:
-        ds = node.ds
-    center = reunit(ds, node[center_field], "unitary")
     if radius is None:
-        radius = radius_factor * reunit(ds, node[radius_field], "unitary")
-
-    node._sphere = None
-    node._sphere_center = center
+        radius = radius_factor * node[radius_field]
     node._sphere_radius = radius
-    node.__class__.sphere = property(fget=getsp, fset=setsp, fdel=delsp)
+    node._sphere_ds = ds
+    node._sphere = None
+    node._sphere_center = node[center_field]
+    node.__class__.sphere = property(fget=_getsp, fset=_setsp, fdel=_delsp)
 
 def node_icom(node):
     sphere = get_node_sphere(node)
@@ -131,7 +160,8 @@ def node_icom(node):
         node[f"icom_all_position_{ax}"] = center[iax]
 
 def node_profile(node, bin_fields, profile_fields, weight_field,
-                 data_object="sphere", profile_kwargs=None, output_dir=".",):
+                 data_object="sphere", profile_kwargs=None,
+                 output_format="ds", output_dir=".",):
 
     nd = len(bin_fields)
     for field in bin_fields + profile_fields + [weight_field]:
@@ -143,14 +173,13 @@ def node_profile(node, bin_fields, profile_fields, weight_field,
     else:
         wname = weight_field[1]
 
-    fpre = f"{str(node.ds)}_{nd}D_profile"
+    output_key = get_output_key(node, output_format)
+    fpre = f"{output_key}_{nd}D_profile"
     fkey = "_".join([field[1] for field in bin_fields]) + f"_{wname}"
     fn = f"{fpre}_{fkey}.h5"
     ofn = os.path.join(output_dir, fn)
     if os.path.exists(ofn):
         return
-
-    mylog.info(f"Making profiles for {node} with {node.ds}: {fn}.")
 
     data_source = getattr(node, data_object, None)
     if data_source is None:
@@ -180,7 +209,7 @@ def get_projection_filename(
         particle_projections=False,
         output_format="ds", output_dir="."):
 
-    output_key = get_output_key(node, node.ds, output_format)
+    output_key = get_output_key(node, output_format)
     if field is not None:
         return os.path.join(output_dir, f"{output_key}_Projection_{axis}_{field[1]}_{weight_field[1]}.png")
     if particle_projections:
@@ -224,9 +253,13 @@ def region_projections_not_done(
               if not os.path.exists(fn)]
     return len(my_fns)
 
-def get_output_key(node, ds, output_format):
+def get_output_key(node, output_format):
     if output_format == "ds":
-        output_key = str(ds)
+        dsfn = getattr(node, "_ds_filename", None)
+        if dsfn is None:
+            output_key = str(node.ds)
+        else:
+            output_key = os.path.basename(dsfn)
     elif output_format == "node":
         output_key = f"node_{node.uid}"
     else:
@@ -238,13 +271,12 @@ def region_projections(node, fields, weight_field=("gas", "density"),
                        output_format="ds", output_dir="."):
 
     ds = node.ds
-
     sphere = node.sphere
     left  = sphere.center - 1.05 * sphere.radius
     right = sphere.center + 1.05 * sphere.radius
     region = ds.box(left, right)
 
-    output_key = get_output_key(node, ds, output_format)
+    output_key = get_output_key(node, output_format)
 
     for ax in axes:
         do_fields = \
@@ -285,8 +317,9 @@ def region_projections(node, fields, weight_field=("gas", "density"),
         decorate_plot(node, p)
         p.save(output_dir + "/" + output_key)
 
-def sphere_radial_profiles(node, fields, weight_field=None, output_dir=".",
-                           profile_kwargs=None):
+def sphere_radial_profiles(node, fields, weight_field=None, profile_kwargs=None,
+                           output_format="ds", output_dir="."):
+
     if weight_field is None:
         weight_name = "None"
     else:
@@ -294,7 +327,8 @@ def sphere_radial_profiles(node, fields, weight_field=None, output_dir=".",
             raise ValueError("weight_field must be a tuple of length 2.")
         weight_name = weight_field[1]
 
-    fn = os.path.join(output_dir, f"{str(node.ds)}_profile_weight_field_{weight_name}.h5")
+    output_key = get_output_key(node, output_format)
+    fn = os.path.join(output_dir, f"{output_key}_profile_weight_field_{weight_name}.h5")
     if os.path.exists(fn):
         return
 

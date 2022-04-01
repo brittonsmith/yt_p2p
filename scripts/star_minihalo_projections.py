@@ -41,6 +41,9 @@ if __name__ == "__main__":
                 a.add_vector_field(field)
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
+        done_file = os.path.join(output_dir, "proj_done")
+        if os.path.exists(done_file):
+            continue
 
         ap = AnalysisPipeline(output_dir=output_dir)
         ap.add_operation(yt_dataset, data_dir, add_fields=False)
@@ -62,3 +65,7 @@ if __name__ == "__main__":
 
         for node in ytree.parallel_tree_nodes(my_tree, nodes=nodes, dynamic=True):
             ap.process_target(node)
+
+        if yt.is_root():
+            with open(done_file, mode='w') as f:
+                f.write(f"{time.time()}\n")

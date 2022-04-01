@@ -100,7 +100,7 @@ if __name__ == "__main__":
                 a.add_vector_field(field)
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
-        done_file = os.path.join(output_dir, "done")
+        done_file = os.path.join(output_dir, "prof_done")
         if os.path.exists(done_file):
             continue
 

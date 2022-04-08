@@ -296,6 +296,7 @@ def region_projections(node, fields, weight_field=("gas", "density"),
                 p.set_cmap(field, cmap)
             decorate_plot(node, p)
             p.save(output_dir + "/" + output_key)
+            del p
 
     if not particle_projections:
         return
@@ -316,6 +317,11 @@ def region_projections(node, fields, weight_field=("gas", "density"),
         p.set_cmap(("all", "particle_mass"), "turbo")
         decorate_plot(node, p)
         p.save(output_dir + "/" + output_key)
+        del p
+
+    sphere.clear_data()
+    region.clear_data()
+    del sphere, region, ds
 
 def sphere_radial_profiles(node, fields, weight_field=None, profile_kwargs=None,
                            output_format="ds", output_dir="."):
@@ -346,7 +352,8 @@ def sphere_radial_profiles(node, fields, weight_field=None, profile_kwargs=None,
         weight_field=weight_field,
         **pkwargs)
     profile.save_as_dataset(filename=fn)
-    del profile
+    data_source.clear_data()
+    del profile, data_source
 
 def delattrs(node, attrs):
     for attr in attrs:

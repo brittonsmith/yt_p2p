@@ -8,6 +8,8 @@ import os
 import time
 import yaml
 
+from ytree.data_structures.tree_node import TreeNode
+
 from yt import \
     ProjectionPlot, \
     ParticleProjectionPlot, \
@@ -76,6 +78,9 @@ def _getds(node):
         node._ds = yt_load(node._ds_filename)
     return node._ds
 
+def _yt_dataset_pre():
+    TreeNode.ds = property(fget=_getds, fset=_setds, fdel=_delds)
+
 def yt_dataset(node, data_dir, add_fields=True):
     node._ds_filename = get_dataset_filename(node, data_dir)
 
@@ -84,11 +89,10 @@ def yt_dataset(node, data_dir, add_fields=True):
     if ds is None or os.path.basename(node._ds_filename) != ds.basename:
         node._ds = None
 
-    if not hasattr(node.__class__, "ds"):
-        node.__class__.ds = property(fget=_getds, fset=_setds, fdel=_delds)
-
     if add_fields:
         add_p2p_fields(node.ds)
+
+yt_dataset.preprocess = _yt_dataset_pre
 
 def get_node_sphere(node, ds=None,
                     center_field="position",
@@ -129,6 +133,9 @@ def _getsp(node):
     node._sphere = ds.sphere(center, radius)
     return node._sphere
 
+def _node_sphere_pre():
+    TreeNode.sphere = property(fget=_getsp, fset=_setsp, fdel=_delsp)
+
 def node_sphere(node, ds=None,
                 center_field="position",
                 radius=None,
@@ -141,7 +148,8 @@ def node_sphere(node, ds=None,
     node._sphere_ds = ds
     node._sphere = None
     node._sphere_center = node[center_field]
-    node.__class__.sphere = property(fget=_getsp, fset=_setsp, fdel=_delsp)
+
+node_sphere.preprocess = _node_sphere_pre
 
 def node_icom(node):
     sphere = get_node_sphere(node)

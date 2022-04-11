@@ -57,15 +57,19 @@ def get_yt_dataset(node, data_dir):
     dsfn = get_dataset_filename(node, data_dir)
     return yt_load(dsfn)
 
+def delattrs(node, attrs):
+    for attr in attrs:
+        try:
+            delattr(node, attr)
+        except AttributeError:
+            pass
+
 def _setds(node, value):
     node._ds = value
 
+_ds_attrs = ("_ds", "_ds_filename")
 def _delds(node):
-    try:
-        del node._ds
-        del node._ds_filename
-    except AttributeError:
-        pass
+    delattrs(node, _ds_attrs)
 
 def _getds(node):
     if node._ds is None:
@@ -77,13 +81,11 @@ def yt_dataset(node, data_dir, add_fields=True):
 
     # If we already have one, check it's the right one.
     ds = getattr(node, "_ds", None)
-    if ds is not None:
-        if os.path.basename(node._ds_filename) != ds.basename:
-            node._ds = None
-    else:
+    if ds is None or os.path.basename(node._ds_filename) != ds.basename:
         node._ds = None
 
-    node.__class__.ds = property(fget=_getds, fset=_setds, fdel=_delds)
+    if not hasattr(node.__class__, "ds"):
+        node.__class__.ds = property(fget=_getds, fset=_setds, fdel=_delds)
 
     if add_fields:
         add_p2p_fields(node.ds)
@@ -103,14 +105,15 @@ def get_node_sphere(node, ds=None,
 def _setsp(node, value):
     node._sphere = value
 
+_sp_attrs = (
+    "_sphere",
+    "_sphere_center",
+    "_sphere_radius",
+    "_sphere_ds",
+)
+
 def _delsp(node):
-    try:
-        del node._sphere
-        del node._sphere_center
-        del node._sphere_radius
-        del node._sphere_ds
-    except AttributeError:
-        pass
+    delattrs(node, _sp_attrs)
 
 def _getsp(node):
     if node._sphere is not None:
@@ -354,13 +357,6 @@ def sphere_radial_profiles(node, fields, weight_field=None, profile_kwargs=None,
     profile.save_as_dataset(filename=fn)
     data_source.clear_data()
     del profile, data_source
-
-def delattrs(node, attrs):
-    for attr in attrs:
-        try:
-            delattr(node, attr)
-        except AttributeError:
-            pass
 
 time_last_gc = time.time()
 def garbage_collect(node, time_between_gc):

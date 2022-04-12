@@ -2,29 +2,96 @@
 Functions for creating collapse models based on radial profiles.
 """
 
+from collections import defaultdict
 import numpy as np
+import os
 
-from pygrackle import \
-    FluidContainer
+from pygrackle import FluidContainer
 
 from pygrackle.yt_fields import \
     _get_needed_fields, \
     _field_map
+from yt.utilities.logger import ytLogger
 
 from yt.funcs import get_pbar
 from yt.loaders import load as yt_load
 from yt.utilities.physical_constants import me, mp
 
+from yt_p2p.stars import get_star_data
+
+from ytree.utilities.logger import log_level
 
 def get_datasets(fns):
     pbar = get_pbar('Loading datasets', len(fns))
     dss = []
     for i, fn in enumerate(fns):
-        ds = yt_load(fn, minimal_fields=True)
+        if fn is None:
+            ds = None
+        else:
+            ds = yt_load(fn, minimal_fields=True)
         dss.append(ds)
         pbar.update(i+1)
     pbar.finish()
     return dss
+
+_model_es = None
+_model_stars = None
+def load_model_profiles(star_id,
+                        data_dir="star_minihalos",
+                        stars_fn="star_hosts.yaml",
+                        sim_fn="simulation.h5"):
+
+    global _model_es
+    if _model_es is None:
+        _model_es = yt_load(sim_fn)
+    es = _model_es
+    times = es.data["time"].to("Myr")
+    fns = es.data["filename"].astype(str)
+
+    global _model_stars
+    if _model_stars is None:
+        _model_stars = get_star_data(stars_fn)
+    star_data = _model_stars
+
+    ct = star_data[star_id]["creation_time"]
+
+    dsfns = defaultdict(list)
+    weights = ["None", "cell_volume", "cell_mass"]
+
+    for t, fn in zip(times, fns):
+        if t <= ct:
+            pdir = "icom_gas_position"
+            to_get = ["None", "cell_volume", "cell_mass"]
+        else:
+            pdir = "icom_all_position"
+            to_get = ["None", "cell_volume"]
+
+        exists = 0
+        these_fns = {}
+        for weight in weights:
+            if weight in to_get:
+                basename = f"{os.path.basename(fn)}_profile_weight_field_{weight}.h5"
+                my_fn = os.path.join(
+                    data_dir, f"star_{star_id}", "profiles", pdir, basename)
+                if os.path.exists(my_fn):
+                    exists += 1
+            else:
+                my_fn = None
+
+            these_fns[weight] = my_fn
+
+        if len(to_get) == exists:
+            for weight in weights:
+                dsfns[weight].append(these_fns[weight])
+
+    # dict of lists
+    with log_level(40, mylog=ytLogger):
+        my_dss = {weight: get_datasets(dsfns[weight]) for weight in weights}
+    # list of dicts
+    rval = [{weight: my_dss[weight][i] for weight in weights}
+            for i in range(len(my_dss[weights[0]]))]
+
+    return rval
 
 # Profile rebinning functions
 

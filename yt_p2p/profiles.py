@@ -52,6 +52,9 @@ def my_profile(dobj, bin_fields, profile_fields, n_bins=None, extrema=None, logs
 
     ds = dobj.ds
 
+    if units is None:
+        units = {}
+
     if isinstance(bin_fields[0], str):
         bin_fields = [bin_fields]
 
@@ -66,35 +69,52 @@ def my_profile(dobj, bin_fields, profile_fields, n_bins=None, extrema=None, logs
 
         if extrema is None:
             extrema = {}
-        if len(extrema) != len(bin_fields):
+
+        ex_fields = set(bin_fields).difference(extrema.keys())
+        if ex_fields:
             exs = dobj.quantities.extrema(bin_fields)
             if isinstance(exs, unyt_array):
-                exs = [exs]
+                exs = (exs,)
+            for field, ex in zip(bin_fields, exs):
+                extrema[field] = ex
 
-        for bin_field, ex in zip(bin_fields, exs):
+        for bin_field, ex in extrema.items():
             if bin_field in n_bins:
                 continue
-            if units is not None and bin_field in units:
+            if bin_field in units:
                 ex.convert_to_units(units[bin_field])
             if logs is None:
                 my_log = True
             else:
                 my_log = logs.get(bin_field, True)
 
-            if extrema.get(bin_field, None) is None:
-                if my_log:
-                    if ex[0] <= 0:
-                        fd = dobj[bin_field]
-                        if units is not None and bin_field in units:
-                            fd.convert_to_units(units[bin_field])
-                        ex[0] = fd[fd > 0].min()
-                        del fd
-                    mi = 10**np.floor(np.log10(ex[0]))
-                    ma = 10**np.ceil(np.log10(ex[1]))
-                else:
-                    mi = np.floor(ex[0])
-                    ma = np.ceil(ex[1])
-                extrema[bin_field] = (mi, ma)
+            if ex[1] <= ex[0]:
+                raise ValueError(f"Min is greater than max for {bin_field}: {ex}.")
+
+            if np.inf in np.abs(ex):
+                fd = dobj[bin_field]
+                if bin_field in units:
+                    fd.convert_to_units(units[bin_field])
+
+                if ex[0] == -np.inf:
+                    ex[0] = fd[fd > -np.inf].min()
+                if ex[1] == np.inf:
+                    ex[1] = fd[fd < np.inf].max()
+                del fd
+
+            if my_log:
+                if ex[0] <= 0:
+                    fd = dobj[bin_field]
+                    if bin_field in units:
+                        fd.convert_to_units(units[bin_field])
+                    ex[0] = fd[fd > 0].min()
+                    del fd
+                mi = 10**np.floor(np.log10(ex[0]))
+                ma = 10**np.ceil(np.log10(ex[1]))
+            else:
+                mi = np.floor(ex[0])
+                ma = np.ceil(ex[1])
+            extrema[bin_field] = (mi, ma)
 
             my_ex = extrema[bin_field]
             if my_log:

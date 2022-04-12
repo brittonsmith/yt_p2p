@@ -24,13 +24,15 @@ from yt.extensions.p2p.tree_analysis_operations import \
     garbage_collect
 
 def my_analysis(pipeline, grackle_fields, data_dir="."):
-    pipeline.add_operation(yt_dataset, data_dir)
+    pipeline.add_operation(yt_dataset, data_dir, add_fields=False)
 
     center_fields = ["icom_gas_position", "icom_all_position"]
 
     for field in center_fields:
         pipeline.add_operation(
             node_sphere, center_field=field)
+
+        output_dir = f"profiles/{field}"
 
         if field in ["icom_gas_position"]:
             pipeline.add_operation(
@@ -50,7 +52,7 @@ def my_analysis(pipeline, grackle_fields, data_dir="."):
                  ("gas", "H2_p0_fraction"),
                  ("gas", "metallicity3")],
                 weight_field=("gas", "cell_mass"),
-                output_dir=f"profiles/{field}")
+                output_dir=output_dir)
 
         pipeline.add_operation(
             sphere_radial_profiles,
@@ -58,7 +60,7 @@ def my_analysis(pipeline, grackle_fields, data_dir="."):
              ("gas", "dark_matter_density"),
              ("gas", "matter_density")],
             weight_field=("gas", "cell_volume"),
-            output_dir=f"profiles/{field}")
+            output_dir=output_dir)
 
         pipeline.add_operation(
             sphere_radial_profiles,
@@ -66,7 +68,7 @@ def my_analysis(pipeline, grackle_fields, data_dir="."):
              ("gas", "dark_matter_mass"),
              ("gas", "matter_mass")],
             weight_field=None,
-            output_dir=f"profiles/{field}")
+            output_dir=output_dir)
 
         pipeline.add_operation(delattrs, ["sphere"], always_do=True)
 
@@ -98,7 +100,7 @@ if __name__ == "__main__":
                 a.add_vector_field(field)
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
-        done_file = os.path.join(output_dir, "done")
+        done_file = os.path.join(output_dir, "prof_done")
         if os.path.exists(done_file):
             continue
 

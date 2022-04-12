@@ -16,6 +16,8 @@ Functions relating to star particles formed in the simulations.
 import numpy as np
 import yaml
 
+from unyt import unyt_quantity
+
 def get_star_data(filename, remove_doubles=True):
     with open(filename, "r") as f:
         star_data = yaml.load(f, Loader=yaml.FullLoader)
@@ -31,5 +33,9 @@ def get_star_data(filename, remove_doubles=True):
         double_ids = star_ids[np.where(np.diff(star_cts) < 1e-3)[0]+1]
         for double_id in double_ids:
             del star_data[double_id]
+
+    for star_id in star_data:
+        ct = star_data[star_id]["creation_time"].split()
+        star_data[star_id]["creation_time"] = unyt_quantity(float(ct[0]), ct[1])
 
     return star_data

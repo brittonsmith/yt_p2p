@@ -146,21 +146,34 @@ def track_global_binning(pdata, bin_data):
 
     bin_data['min'] = default_func(min, bin_data['min'], pdata)
     bin_data['max'] = default_func(max, bin_data['max'], pdata)
+    if 'bin_density' not in bin_data:
+        bin_data['bin_density'] = (pdata.size - 1) / (pdata.max() - pdata.min())
 
-def calc_global_binning(data, field, log=True, rounding=True, nonzero=True):
+def calc_global_binning(data, field, log=True, rounding=True, nonzero=True,
+                        bin_density=False):
     binning = {}
     for datum in data:
 
-        my_datum = datum[field]
+        if field is None:
+            my_datum = datum.x_bins
+        else:
+            my_datum = datum[field]
+
         if nonzero:
             my_datum = my_datum[my_datum.nonzero()[0]]
         if log:
             my_datum = np.log10(my_datum)
 
         track_global_binning(my_datum, binning)
+
     if rounding:
         binning['min'] = np.floor(binning['min'])
         binning['max'] = np.ceil(binning['max'])
+
+    if bin_density:
+        bin_density = int(np.round(binning['bin_density']))
+        return binning['min'], binning['max'], bin_density
+
     return binning['min'], binning['max']
 
 # Peak finding functions
@@ -231,9 +244,16 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
     profile_data = []
     time_data = []
 
-    pbar = yt.get_pbar("Gathering profiles", len(profiles)-1)
+    profile_cube = {}
+    bmin, bmax, bden = calc_global_binning(
+        [p["None"].profile for p in profiles], None,
+        bin_density=True)
+    dx = 1 / bden
+    nbins = int((bmax - bmin) * bden)
+
+    pbar = yt.get_pbar("Gathering profiles", len(profiles))
     for i, profile_dict in enumerate(profiles):
-        pbar.update(i)
+        pbar.update(i+1)
         npds = profile_dict["None"]
         vpds = profile_dict["cell_volume"]
         mpds = profile_dict["cell_mass"]
@@ -243,18 +263,15 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
         x_bins = npds.profile.x_bins
         used = npds.data['data', 'used'].d.astype(bool)
 
-        m_gas = npds.profile['data', 'cell_mass'].to('Msun')[used]
+        m_gas = npds.profile['data', 'cell_mass'].to('Msun')
         gas_mass_enclosed = m_gas.cumsum()
-        m_dm = npds.profile['data', 'dark_matter_mass'].to('Msun')[used]
+        m_dm = npds.profile['data', 'dark_matter_mass'].to('Msun')
         dark_matter_mass_enclosed = m_dm.cumsum()
         total_mass_enclosed = gas_mass_enclosed + dark_matter_mass_enclosed
 
-        gas_density_volume = vpds.data['data', 'density'][used]
-        dark_matter_density_volume = vpds.data['data', 'dark_matter_density'][used]
-        volume_weight = vpds.data['data', 'weight'][used]
-
-        r = npds.data['data', 'radius'][used].to('pc')
-        dr = np.diff(x_bins)[used]
+        gas_density_volume = vpds.data['data', 'density']
+        dark_matter_density_volume = vpds.data['data', 'dark_matter_density']
+        volume_weight = vpds.data['data', 'weight']
 
         profile_datum = {
             "gas_mass_enclosed": gas_mass_enclosed,
@@ -263,42 +280,50 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
             "gas_density_volume_weighted": gas_density_volume,
             "dark_matter_density_volume_weighted": dark_matter_density_volume,
             "cell_volume_weight": volume_weight,
-            "radius": r,
-            "dr": dr
+            "used": npds.data['data', 'used'],
         }
 
         current_time = npds.current_time.to("Myr")
         if current_time < creation_time:
-            v_turb = mpds.data['standard_deviation', 'velocity_magnitude'][used]
+            v_turb = mpds.data['standard_deviation', 'velocity_magnitude']
             profile_datum["turbulent_velocity"] = v_turb
 
-            p = mpds.data['data', 'pressure'][used]
-            cs = mpds.data['data', 'sound_speed'][used]
+            p = mpds.data['data', 'pressure']
+            cs = mpds.data['data', 'sound_speed']
             cs_eff = np.sqrt(cs**2 + v_turb**2)
             m_BE = (b * (cs**4 / G**1.5) * p**-0.5)
             profile_datum["bonnor_ebert_ratio"] = (gas_mass_enclosed / m_BE).to("")
 
-            exclude_fields = ['x', 'x_bins', 'radius', 'weight']
+            exclude_fields = ['x', 'x_bins', 'radius', 'used', 'weight']
             pfields = [field for field in mpds.field_list
                        if field[0] == 'data' and
                        field[1] not in exclude_fields]
             profile_datum.update(
-                {field: mpds.data[field][used] for field in pfields})
+                {field: mpds.data[field] for field in pfields})
             profile_datum["cell_mass_weight"] = mpds.data["data", "weight"]
+
+        cstart = int((np.log10(x_bins[0]) - bmin) / dx)
+        cend = cstart + x_bins.size - 1
+        for field, values in profile_datum.items():
+            if field not in profile_cube:
+                profile_cube[field] = np.zeros((len(profiles), nbins)) * values.units
+
+            profile_cube[field][i, cstart:cend][used] = values[used]
 
         profile_data.append(profile_datum)
 
-    time_data = npds.arr(time_data)
+    cube_radius = np.logspace(bmin, bmax, nbins+1) * npds.profile.x.units
+    cube_time = npds.arr(time_data)
+
+    profile_cube["radius"] = cube_radius
+    profile_cube["time"] = cube_time
 
     fn = os.path.join(output_dir, f"star_{star_id}_radius.h5")
-    create_cube(npds, fn, profile_data, tdata=time_data, bin_field="radius")
-
-    fn = os.path.join(output_dir, f"star_{star_id}_mass.h5")
-    create_cube(npds, fn, profile_data, tdata=time_data, bin_field="gas_mass_enclosed")
+    yt.save_as_dataset(npds, filename=fn, data=profile_cube)
 
 def create_cube(ds, filename, pdata, tdata=None, bin_field="radius", bin_density=5):
 
-    rdata = rebin_profiles(pdata, bin_field, 5)
+    rdata = rebin_profiles(pdata, bin_field, 20)
 
     pcube = {}
     for field in rdata[0]:

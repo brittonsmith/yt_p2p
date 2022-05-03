@@ -294,6 +294,15 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
             m_BE = (b * (cs**4 / G**1.5) * p**-0.5)
             profile_datum["bonnor_ebert_ratio"] = (gas_mass_enclosed / m_BE).to("")
 
+            dr = np.diff(x_bins)
+            r = mpds.data['data', 'radius']
+            rho = mpds.data['data', 'density']
+            dP_hyd = (G * total_mass_enclosed * rho * dr / r**2)[used]
+            P_hyd1 = np.flip(np.flip(dP_hyd).cumsum()).to(p.units)
+            P_hydro = np.zeros_like(p)
+            P_hydro[used] = P_hyd1
+            profile_datum["hydrostatic_pressure"] = P_hydro
+
             exclude_fields = ['x', 'x_bins', 'radius', 'used', 'weight']
             pfields = [field for field in mpds.field_list
                        if field[0] == 'data' and
@@ -310,20 +319,28 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
 
             profile_cube[field][i, cstart:cend][used] = values[used]
 
+        # Filter out unused profile values.
+        # That's the way I made rebin_profile and I don't feel like changing it.
+        for field in profile_datum:
+            profile_datum[field] = profile_datum[field][used]
         profile_data.append(profile_datum)
 
     cube_radius = np.logspace(bmin, bmax, nbins+1) * npds.profile.x.units
     cube_time = npds.arr(time_data)
+    extra_data = {"radius": cube_radius, "time": cube_time}
 
-    profile_cube["radius"] = cube_radius
-    profile_cube["time"] = cube_time
+    profile_cube.update(extra_data)
 
     fn = os.path.join(output_dir, f"star_{star_id}_radius.h5")
     yt.save_as_dataset(npds, filename=fn, data=profile_cube)
 
-def create_cube(ds, filename, pdata, tdata=None, bin_field="radius", bin_density=5):
+    fn = os.path.join(output_dir, f"star_{star_id}_mass.h5")
+    create_rebinned_cube(npds, fn, profile_data, extra_data=extra_data)
 
-    rdata = rebin_profiles(pdata, bin_field, 20)
+def create_rebinned_cube(ds, filename, pdata, extra_data=None,
+                         bin_field="gas_mass_enclosed", bin_density=10):
+
+    rdata = rebin_profiles(pdata, bin_field, bin_density)
 
     pcube = {}
     for field in rdata[0]:
@@ -334,7 +351,7 @@ def create_cube(ds, filename, pdata, tdata=None, bin_field="radius", bin_density
             datum.append(pdatum[field])
         pcube[field] = uvstack(datum)
     
-    if tdata is not None:
-        pcube["time"] = tdata
+    if extra_data is not None:
+        pcube.update(extra_data)
 
     yt.save_as_dataset(ds, filename=filename, data=pcube)

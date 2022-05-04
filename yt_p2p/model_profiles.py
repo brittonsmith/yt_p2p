@@ -290,7 +290,6 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
 
             p = mpds.data['data', 'pressure']
             cs = mpds.data['data', 'sound_speed']
-            cs_eff = np.sqrt(cs**2 + v_turb**2)
             m_BE = (b * (cs**4 / G**1.5) * p**-0.5)
             profile_datum["bonnor_ebert_ratio"] = (gas_mass_enclosed / m_BE).to("")
 
@@ -303,7 +302,11 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
             P_hydro[used] = P_hyd1
             profile_datum["hydrostatic_pressure"] = P_hydro
 
-            exclude_fields = ['x', 'x_bins', 'radius', 'used', 'weight']
+            cs_eff = np.sqrt(cs**2 + v_turb**2)
+            t_cs = (2 * r / cs_eff).to("Myr")
+            profile_datum["sound_crossing_time"] = t_cs
+
+            exclude_fields = ['x', 'x_bins', 'used', 'weight']
             pfields = [field for field in mpds.field_list
                        if field[0] == 'data' and
                        field[1] not in exclude_fields]
@@ -325,19 +328,26 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
             profile_datum[field] = profile_datum[field][used]
         profile_data.append(profile_datum)
 
-    cube_radius = np.logspace(bmin, bmax, nbins+1) * npds.profile.x.units
     cube_time = npds.arr(time_data)
-    extra_data = {"radius": cube_radius, "time": cube_time}
-
-    profile_cube.update(extra_data)
-
-    fn = os.path.join(output_dir, f"star_{star_id}_radius.h5")
-    yt.save_as_dataset(npds, filename=fn, data=profile_cube)
+    extra_data = {"time": cube_time}
+    extra_attrs = {"creation_time": creation_time}
 
     fn = os.path.join(output_dir, f"star_{star_id}_mass.h5")
-    create_rebinned_cube(npds, fn, profile_data, extra_data=extra_data)
+    create_rebinned_cube(npds, fn, profile_data, extra_data=extra_data,
+                         extra_attrs=extra_attrs)
 
-def create_rebinned_cube(ds, filename, pdata, extra_data=None,
+    # include radius as just a 1d array since it is constant over time
+    cube_radius = np.logspace(bmin, bmax, nbins+1) * npds.profile.x.units
+    extra_data["radius"] = cube_radius
+    del profile_cube["data", "radius"]
+    profile_cube.update(extra_data)
+    fn = os.path.join(output_dir, f"star_{star_id}_radius.h5")
+    yt.save_as_dataset(npds, filename=fn, data=profile_cube,
+                       extra_attrs=extra_attrs)
+
+
+def create_rebinned_cube(ds, filename, pdata,
+                         extra_data=None, extra_attrs=None,
                          bin_field="gas_mass_enclosed", bin_density=10):
 
     rdata = rebin_profiles(pdata, bin_field, bin_density)
@@ -354,4 +364,5 @@ def create_rebinned_cube(ds, filename, pdata, extra_data=None,
     if extra_data is not None:
         pcube.update(extra_data)
 
-    yt.save_as_dataset(ds, filename=filename, data=pcube)
+    yt.save_as_dataset(ds, filename=filename, data=pcube,
+                       extra_attrs=extra_attrs)

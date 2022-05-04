@@ -28,7 +28,7 @@ def prepare_model(cds, start_time, profile_index, fc=None):
                       function=_specific_thermal_energy,
                       units="erg/g")
 
-    efields = ["external_pressure",
+    efields = ["hydrostatic_pressure",
                "dark_matter",
                "metallicity",
                "turbulent_velocity",

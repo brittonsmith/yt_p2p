@@ -30,7 +30,7 @@ def prepare_model(mds, rds, start_time, profile_index, fc=None):
 
     efields = ["hydrostatic_pressure",
                "dark_matter",
-               "density",
+               # "density",
                "gas_mass_enclosed",
                "dark_matter_mass_enclosed",
                "metallicity",
@@ -39,7 +39,8 @@ def prepare_model(mds, rds, start_time, profile_index, fc=None):
                "H_p0_ionization_rate",
                "He_p0_ionization_rate",
                "He_p1_ionization_rate",
-               "photo_gamma"]
+               "photo_gamma",
+               "used_bins"]
     external_data = {}
 
     field_list = [field for field in mds.field_list if field[1] != "time"]
@@ -69,7 +70,10 @@ def prepare_model(mds, rds, start_time, profile_index, fc=None):
         yfield, units = _field_map[efield]
         external_data[efield] = rds.data[yfield].to(units).d
 
-    external_data["radius"] = rds.data["data", "radius"].to("code_length").d
+    external_data["used_bins"] = external_data["used_bins"].astype(bool)
+    external_data["radial_bins"] = rds.data["data", "radius"].to("code_length").d
+    rb = external_data["radial_bins"]
+    external_data["radius"] = rb[:-1] * np.sqrt(rb[1:] / rb[:-1])
 
     if 'de' in fc:
         fc['de'] *= (mp/me).d

@@ -30,7 +30,7 @@ def prepare_model(mds, rds, start_time, profile_index, fc=None):
 
     efields = ["hydrostatic_pressure",
                "dark_matter",
-               # "density",
+               "gas_density",
                "gas_mass_enclosed",
                "dark_matter_mass_enclosed",
                "metallicity",

@@ -18,7 +18,8 @@ def _specific_thermal_energy(field, data):
 
 # Grackle fluid container preparation
 
-def prepare_model(mds, rds, start_time, profile_index, fc=None):
+def prepare_model(mds, rds, start_time, profile_indices, fc=None):
+    profile_indices = np.asarray(profile_indices)
     time_data = mds.data["time"]
     time_index = np.abs(time_data - start_time).argmin()
 
@@ -46,11 +47,11 @@ def prepare_model(mds, rds, start_time, profile_index, fc=None):
     field_list = [field for field in mds.field_list if field[1] != "time"]
     if ('data', 'specific_thermal_energy') not in field_list:
         field_list.append(('data', 'specific_thermal_energy'))
-    mass_data = {field: mds.data[field][time_index:, profile_index]
+    mass_data = {field: mds.data[field][time_index:, profile_indices]
                  for field in field_list}
 
     if fc is None:
-        fc = FluidContainer(mds.grackle_data, 1)
+        fc = FluidContainer(mds.grackle_data, profile_indices.size)
 
     fields = _get_needed_fields(fc.chemistry_data)
     for gfield in fields:

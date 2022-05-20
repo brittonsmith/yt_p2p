@@ -278,7 +278,7 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
             "total_mass_enclosed": total_mass_enclosed,
             "dark_matter_mass_enclosed": dark_matter_mass_enclosed,
             "gas_density_volume_weighted": gas_density_volume,
-            "dark_matter_density_volume_weighted": dark_matter_density_volume,
+            "dark_matter_density": dark_matter_density_volume,
             "cell_volume_weight": volume_weight,
             "used": npds.data['data', 'used'],
         }
@@ -306,7 +306,7 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
             t_cs = (2 * r / cs_eff).to("Myr")
             profile_datum["sound_crossing_time"] = t_cs
 
-            exclude_fields = ['x', 'x_bins', 'used', 'weight']
+            exclude_fields = ['x', 'x_bins', 'used', 'weight', 'dark_matter_density']
             pfields = [field for field in mpds.field_list
                        if field[0] == 'data' and
                        field[1] not in exclude_fields]

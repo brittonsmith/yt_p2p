@@ -5,6 +5,7 @@ Functions for preparing profile data for the Minihalo model.
 from collections import defaultdict
 import numpy as np
 import os
+from scipy.interpolate import interp1d
 from unyt import uvstack
 
 import yt
@@ -91,6 +92,8 @@ def load_model_profiles(star_id,
 
 # Profile rebinning functions
 
+_lin_fields = ("velocity_x", "velocity_y", "velocity_z")
+
 def rebin_profile(profile, bin_field, new_bins):
     """
     Rebin profile data using linear interpolation.
@@ -102,7 +105,14 @@ def rebin_profile(profile, bin_field, new_bins):
     l_old_bins = np.log10(profile[bin_field])
     new_profile = {bin_field: profile[bin_field].units * new_bins}
     for field, data in profile.items():
-        if field in [bin_field, ('data', 'used')]:
+        if isinstance(field, tuple):
+            fname = field[1]
+        else:
+            fname = field
+
+        log_field = fname not in _lin_fields
+
+        if field == bin_field:
             continue
 
         new_data = data.units * np.zeros(new_bins.size)
@@ -110,12 +120,20 @@ def rebin_profile(profile, bin_field, new_bins):
         if data.nonzero()[0].size == 0:
             continue
 
-        l_data = np.log10(data.clip(1e-100, np.inf))
+        if log_field:
+            l_data = np.log10(data.clip(1e-100, np.inf))
+        else:
+            l_data = data.copy()
+
         slope = (l_data[ibins[do]+1] - l_data[ibins[do]]) / \
             (l_old_bins[ibins[do]+1] - l_old_bins[ibins[do]])
         new_l_data = slope * (l_new_bins[do] - l_old_bins[ibins[do]]) + \
           l_data[ibins[do]]
-        new_data[do] = np.power(10, new_l_data)
+
+        if log_field:
+            new_data[do] = np.power(10, new_l_data)
+        else:
+            new_data[do] = new_l_data.copy()
 
     return new_profile
 
@@ -123,6 +141,9 @@ def rebin_profiles(profile_data, bin_field, bin_density):
     """
     Rebin a list of profiles with a different field.
     """
+
+    yt.mylog.info(f"Rebinning profiles by {bin_field}.")
+
     bmin, bmax = calc_global_binning(profile_data, bin_field)
     n_bins = int(np.round((bmax - bmin) * bin_density)) + 1
     p_bins = np.logspace(bmin, bmax, n_bins, endpoint=True)
@@ -345,6 +366,63 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
     yt.save_as_dataset(npds, filename=fn, data=profile_cube,
                        extra_attrs=extra_attrs)
 
+def time_interpolate(data, tdata, bin_field):
+    """
+    Fix holes in data by interpolating in the time dimension.
+    """
+
+    yt.mylog.info(f"Fixing data with interpolation.")
+
+    ikwargs = {"kind": "linear", "fill_value": np.nan, "bounds_error": False}
+
+    used = data["used"].d.astype(int)
+    empty = np.where(used == 0)
+    rows = np.unique(empty[1])
+
+    for field in data:
+        if field in [bin_field, "used"]:
+            continue
+
+        datum = data[field]
+
+        for row in rows:
+            rused = used[:, row]
+            if not rused.any():
+                continue
+
+            my_good = (rused == 1)[:datum.shape[0]]
+            if my_good.sum() < 2:
+                continue
+
+            igood = np.where(my_good)[0]
+            ibad = np.where(~my_good)[0]
+
+            tgood = tdata[igood].d
+            tbad = tdata[ibad].d
+
+            if isinstance(field, tuple):
+                fname = field[1]
+            else:
+                fname = field
+            log_field = fname not in _lin_fields
+
+            if log_field:
+                my_y = np.log10(datum[:, row].clip(1e-100, np.inf))
+            else:
+                my_y = datum[:, row].copy()
+
+            ygood = my_y[igood]
+            f1 = interp1d(tgood, ygood, **ikwargs)
+            yfix = f1(tbad)
+
+            fixed = ~np.isnan(yfix)
+            yfixed = yfix[fixed]
+            if log_field:
+                yfixed = np.power(10, yfixed)
+
+            ireplace = ibad[fixed]
+            datum[ireplace, row] = yfixed
+            data["used"][ireplace, row] = 2
 
 def create_rebinned_cube(ds, filename, pdata,
                          extra_data=None, extra_attrs=None,
@@ -360,6 +438,8 @@ def create_rebinned_cube(ds, filename, pdata,
                 continue
             datum.append(pdatum[field])
         pcube[field] = uvstack(datum)
+
+    time_interpolate(pcube, extra_data["time"], bin_field)
     
     if extra_data is not None:
         pcube.update(extra_data)

@@ -64,12 +64,12 @@ def prepare_model(mds, rds, start_time, profile_indices, fc=None):
         # get external data to be used in fluid container
         if pfield[1] in efields:
             efields.pop(efields.index(pfield[1]))
-            external_data[gfield] = rds.data[pfield].to(units).d
+            external_data[gfield] = rds.data[pfield][time_index:].to(units).d
 
     # get extra solely external data fields
     for efield in efields:
         yfield, units = _field_map[efield]
-        external_data[efield] = rds.data[yfield].to(units).d
+        external_data[efield] = rds.data[yfield][time_index:].to(units).d
 
     external_data["used_bins"] = external_data["used_bins"].astype(bool)
     external_data["radial_bins"] = rds.data["data", "radius"].to("code_length").d

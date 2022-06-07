@@ -113,9 +113,6 @@ if __name__ == "__main__":
     data_dir = "/disk12/brs/pop2-prime/firstpop2_L2-Seed3_large/pisn_solo"
 
     a = ytree.load("merger_trees/target_halos/target_halos.h5")
-    for field in ["icom_gas", "icom_all"]:
-        if f"{field}_position_x" in a.field_list:
-            a.add_vector_field(f"{field}_position")
 
     for field in ["icom_gas2", "icom_gas3"]:
         for ax in "xyz":

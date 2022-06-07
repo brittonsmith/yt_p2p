@@ -95,9 +95,6 @@ if __name__ == "__main__":
 
     for star_id, star_info in star_data.items():
         a = ytree.load(star_info["arbor"])
-        for field in ["icom_gas_position", "icom_all_position"]:
-            if f"{field}_x" in a.field_list:
-                a.add_vector_field(field)
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
         done_file = os.path.join(output_dir, "prof_done")

@@ -36,9 +36,6 @@ if __name__ == "__main__":
 
     for star_id, star_info in star_data.items():
         a = ytree.load(star_info["arbor"])
-        for field in center_fields:
-            if f"{field}_x" in a.field_list and field not in a.field_info:
-                a.add_vector_field(field)
 
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
         done_file = os.path.join(output_dir, "proj_done")

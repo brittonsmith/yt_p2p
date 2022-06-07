@@ -94,8 +94,6 @@ if __name__ == "__main__":
     data_dir = "."
     
     a = ytree.load("merger_trees/target_halos/target_halos.h5")
-    if "icom_gas2_position_x" in a.field_list:
-        a.add_vector_field("icom_gas2_position")
 
     for tree in a:
         output_dir = os.path.join(output_data_dir, f"node_{tree.uid}")

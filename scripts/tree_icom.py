@@ -54,17 +54,8 @@ if __name__ == "__main__":
     ap.add_operation(node_icom)
     ap.add_operation(garbage_collect, 60, always_do=True)
 
-    my_ds = None
     for node in parallel_nodes(trees, group=group, save_every=1,
                                njobs=(1, 0), dynamic=(False, True)):
 
-        if my_ds is not None:
-            node.ds = my_ds
-        my_ds = None
-
         yt.mylog.info(f"Doing {node}.")
-        ap.process_target(node)
-
-        if hasattr(node, "ds"):
-            my_ds = node.ds
-            del node.ds
+        ap.process_target(node, handoff_attrs=["ds"])

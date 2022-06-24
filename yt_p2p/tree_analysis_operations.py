@@ -356,6 +356,16 @@ def sphere_radial_profiles(node, fields, weight_field=None, profile_kwargs=None,
         pkwargs.update(profile_kwargs)
 
     data_source = node.sphere
+
+    if ("gas", "velocity_spherical_radius") in fields:
+        bulk_velocity = data_source.field_parameters["bulk_velocity"]
+        if bulk_velocity.sum().to("cm/s") < 1e-3:
+            max_vals = data_source.quantities.sample_at_max_field_values(
+                ("gas", "density"), ["velocity_%s" % ax for ax in "xyz"])
+            bulk_velocity = node.ds.arr(max_vals[1:]).to("km/s")
+            mylog.info(f"Setting bulk velocity to {bulk_velocity}.")
+            data_source.set_field_parameter("bulk_velocity", bulk_velocity)
+
     profile = my_profile(
         data_source,
         ("index", "radius"), fields,

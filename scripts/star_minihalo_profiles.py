@@ -122,6 +122,8 @@ if __name__ == "__main__":
             yt.mylog.info(f"Profiling star {star_id}.")
 
         for node in ytree.parallel_tree_nodes(form_node, nodes=nodes, dynamic=True):
+            if form_node["time"] < node["time"] and node["mass"] < m_min:
+                continue
             if form_node["time"] - node["time"] > tprior and node["mass"] < m_min:
                 continue
 

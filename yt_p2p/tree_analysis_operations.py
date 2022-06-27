@@ -35,7 +35,48 @@ def get_dataset_dict(data_dir):
 
     return _dataset_dicts[data_dir]
 
+def _get_node_time_index(node, etimes, offset=0):
+    """
+    Get the time index associated with this node.
+
+    Check the node and its two last ancestors against the time array.
+    To be valid, all three indices must be unique, meaning neither
+    the node in question has a duplicate index with its ancestor nor
+    the ancestor has a duplicate index with its ancestor.
+    """
+    ifn = np.abs(etimes - node["time"]).argmin()
+    ancs = list(node.ancestors)
+    if not ancs:
+        return ifn + offset
+
+    iancs = []
+    for i, anc in enumerate(node["prog"]):
+        if i == 0:
+            continue
+        if i == 1:
+            my_anc = anc
+        if i > 2:
+            break
+        iancs.append(np.abs(etimes - anc["time"]).argmin())
+
+    if ifn != iancs[0] and iancs[0] != iancs[1]:
+        return ifn + offset
+    return  _get_node_time_index(my_anc, etimes, offset+1)
+
 _es_dict = {}
+def _get_dataset_filename_h5(node, data_dir):
+    if not os.path.exists(os.path.join(data_dir, "simulation.h5")):
+        return None
+
+    if data_dir not in _es_dict:
+        _es_dict[data_dir] = yt_load(os.path.join(data_dir, "simulation.h5"))
+    es = _es_dict[data_dir]
+
+    efns = es.data["filename"].astype(str)
+    etimes = reunit(node.arbor, es.data["time"].to("Myr"), "Myr")
+    ifn = _get_node_time_index(node, etimes)
+    return efns[ifn]
+
 def get_dataset_filename(node, data_dir):
     if "Snap_idx" in node.arbor.field_list:
         ddict = get_dataset_dict(data_dir)
@@ -43,15 +84,9 @@ def get_dataset_filename(node, data_dir):
         if dsfn is not None:
             return os.path.join(data_dir, dsfn)
 
-    if os.path.exists(os.path.join(data_dir, "simulation.h5")):
-        if data_dir not in _es_dict:
-            _es_dict[data_dir] = yt_load(os.path.join(data_dir, "simulation.h5"))
-        es = _es_dict[data_dir]
-
-        efns = es.data["filename"].astype(str)
-        etimes = reunit(node.arbor, es.data["time"].to("Myr"), "Myr")
-        ifn = np.abs(etimes - node["time"]).argmin()
-        return os.path.join(data_dir, efns[ifn])
+    dsfn = _get_dataset_filename_h5(node, data_dir)
+    if dsfn is not None:
+        return os.path.join(data_dir, dsfn)
 
     raise RuntimeError(f"Could not associate {node} with a dataset.")
 

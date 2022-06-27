@@ -123,6 +123,7 @@ def yt_dataset(node, data_dir, add_fields=True):
     ds = getattr(node, "_ds", None)
     if ds is None or os.path.basename(node._ds_filename) != ds.basename:
         node._ds = None
+    del ds
 
     if add_fields:
         add_p2p_fields(node.ds)

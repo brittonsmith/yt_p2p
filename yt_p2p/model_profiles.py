@@ -237,9 +237,10 @@ def find_peaks(ds, bin_field, peak_field, time_index):
     i_peaks = basin_peak_ids(peak_data)
     i_peaks = i_peaks[bin_data[i_peaks] < 1e4]
 
-    # if peak is above 1, include the innermost coordinate that is above 1
+    # if peak is above 1, include the inner/outermost coordinate above 1
     if peak_data.max() > 1:
         i_peaks = np.append(i_peaks, np.where(peak_data > 1)[0].min())
+        i_peaks = np.append(i_peaks, np.where(peak_data > 1)[0].max())
 
     if i_peaks.size == 0:
         i_peaks = np.append(i_peaks, np.argmax(peak_data))

@@ -251,7 +251,8 @@ def find_peaks(ds, bin_field, peak_field, time_index):
     i_peaks.sort()
     return i_peaks
 
-def create_profile_cube(star_id, output_dir="star_cubes"):
+def create_profile_cube(star_id, output_dir="star_cubes",
+                        data_dir="star_minihalos"):
     ### Bonnor-Ebert Mass constant
     a = 1.67
     b = (225 / (32 * np.sqrt(5 * np.pi))) * a**-1.5
@@ -262,7 +263,7 @@ def create_profile_cube(star_id, output_dir="star_cubes"):
     my_star = star_data[star_id]
     creation_time = my_star["creation_time"]
 
-    profiles = load_model_profiles(star_id)
+    profiles = load_model_profiles(star_id, data_dir=data_dir)
     profile_data = []
     time_data = []
 

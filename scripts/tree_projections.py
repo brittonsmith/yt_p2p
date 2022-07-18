@@ -36,7 +36,6 @@ def all_projections(ap, a, field):
     pos_field = f"{field}_position"
     if f"{pos_field}_x" not in a.field_list:
         return
-    a.add_vector_field(pos_field)
 
     ap.add_operation(region_projections_not_done,
                      pfields, output_dir=f"{field}_projections")

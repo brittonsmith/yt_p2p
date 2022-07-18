@@ -47,6 +47,7 @@ def my_analysis(pipeline, grackle_fields, data_dir="."):
                  ("gas", "dynamical_time"),
                  ("gas", "total_dynamical_time"),
                  ("gas", "velocity_magnitude"),
+                 ("gas", "velocity_spherical_radius"),
                  ("gas", "sound_speed"),
                  ("gas", "pressure"),
                  ("gas", "H2_p0_fraction"),
@@ -89,20 +90,18 @@ if __name__ == "__main__":
     prepare_grackle_data(es, parameters=grackle_pars, sim_type=EnzoDataset, initialize=False)
     grackle_fields = [_grackle_map[field][0] for field in _get_needed_fields(es.grackle_data)]
 
-    data_dir = "/disk12/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue"
+    # data_dir = "/disk12/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue"
+    data_dir = "/cephfs/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue"
 
     star_data = get_star_data("star_hosts.yaml")
 
     for star_id, star_info in star_data.items():
-        a = ytree.load(star_info["arbor"])
-        for field in ["icom_gas_position", "icom_all_position"]:
-            if f"{field}_x" in a.field_list:
-                a.add_vector_field(field)
-
         output_dir = os.path.join(output_data_dir, f"star_{star_id}")
         done_file = os.path.join(output_dir, "prof_done")
         if os.path.exists(done_file):
             continue
+
+        a = ytree.load(star_info["arbor"])
 
         ap = AnalysisPipeline(output_dir=output_dir)
         ap.add_recipe(my_analysis, grackle_fields, data_dir=data_dir)
@@ -123,6 +122,8 @@ if __name__ == "__main__":
             yt.mylog.info(f"Profiling star {star_id}.")
 
         for node in ytree.parallel_tree_nodes(form_node, nodes=nodes, dynamic=True):
+            if form_node["time"] < node["time"] and node["mass"] < m_min:
+                continue
             if form_node["time"] - node["time"] > tprior and node["mass"] < m_min:
                 continue
 

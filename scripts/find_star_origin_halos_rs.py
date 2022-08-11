@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     star_hosts = {}
 
-    for i in ctsort[:1]:
+    for i in ctsort:
         ifn = np.where(etimes > cts[i])[0][0]
         my_fn = efns[ifn]
         my_z = eredshifts[ifn]

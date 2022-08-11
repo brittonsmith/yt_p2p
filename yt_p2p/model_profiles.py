@@ -50,7 +50,10 @@ def load_model_profiles(star_id,
         _model_stars = get_star_data(stars_fn)
     star_data = _model_stars
 
-    ct = star_data[star_id]["creation_time"]
+    if star_id is None:
+        ct = np.inf
+    else:
+        ct = star_data[star_id]["creation_time"]
 
     dsfns = defaultdict(list)
     weights = ["None", "cell_volume", "cell_mass"]
@@ -68,8 +71,11 @@ def load_model_profiles(star_id,
         for weight in weights:
             if weight in to_get:
                 basename = f"{os.path.basename(fn)}_profile_weight_field_{weight}.h5"
-                my_fn = os.path.join(
-                    data_dir, f"star_{star_id}", "profiles", pdir, basename)
+                if star_id is None:
+                    my_dir = data_dir
+                else:
+                    my_dir = os.path.join(data_dir, f"star_{star_id}")
+                my_fn = os.path.join(my_dir, "profiles", pdir, basename)
                 if os.path.exists(my_fn):
                     exists += 1
             else:
@@ -259,9 +265,12 @@ def create_profile_cube(star_id, output_dir="star_cubes",
 
     ensure_dir(output_dir)
 
-    star_data = get_star_data("star_hosts.yaml")
-    my_star = star_data[star_id]
-    creation_time = my_star["creation_time"]
+    if star_id is None:
+        creation_time = np.inf
+    else:
+        star_data = get_star_data("star_hosts.yaml")
+        my_star = star_data[star_id]
+        creation_time = my_star["creation_time"]
 
     profiles = load_model_profiles(star_id, data_dir=data_dir)
     profile_data = []

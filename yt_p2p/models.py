@@ -4,6 +4,7 @@ Functions for creating collapse models based on radial profiles.
 
 import numpy as np
 import os
+import yaml
 import yt
 
 from pygrackle import FluidContainer
@@ -167,8 +168,9 @@ def create_model(model_data, model_parameters, metallicity=None):
     run_parameters["star_creation_time"] = relative_creation_time.to("s").d / \
       my_fc.chemistry_data.time_units
 
-    run_parameters["final_time"] = (data_time[-1] - start_time).to("s").d / \
-      my_fc.chemistry_data.time_units
+    if "final_time" not in run_parameters:
+        run_parameters["final_time"] = (data_time[-1] - start_time).to("s").d / \
+          my_fc.chemistry_data.time_units
     run_parameters["gas_mass"] = \
       full_data['data', 'gas_mass_enclosed'].to('code_mass').d[0]
     run_parameters["initial_radius"] = \
@@ -184,3 +186,23 @@ def create_model(model_data, model_parameters, metallicity=None):
     )
     model.verbose = 2
     return model
+
+def calculate_final_time(models, star_id, models_fn, model_data, model_parameters):
+    if star_id not in models:
+        models[star_id] = {}
+    my_model = models[star_id]
+
+    if "final_time" in my_model:
+        final_time = my_model["final_time"]
+    else:
+        my_parameters = model_parameters.copy()
+        my_parameters["max_temperature"] = 8000
+        my_parameters["final_time"] = np.inf
+        model = create_model(model_data, my_parameters)
+        model.name = f"star_{star_id}/max_temperature"
+        model.evolve()
+        final_time = model.current_time
+        my_model["final_time"] = float(final_time)
+
+        with open(models_fn, mode="w") as f:
+            yaml.dump(models, stream=f)

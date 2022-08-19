@@ -1,7 +1,9 @@
 from matplotlib import pyplot
 
 class DataPlotter:
-    def __init__(self, plots, labels, figsize=None, plot_func="loglog"):
+    def __init__(self, plots, labels, figsize=None,
+                 plot_func="plot", xscale="log", yscale="log"):
+
         self.plots = plots
         self.labels = labels
         self.plot_func = plot_func
@@ -14,7 +16,11 @@ class DataPlotter:
             figsize = list(figsize)
         figsize[1] *= n_plots
         self.fig, axl = pyplot.subplots(n_plots, 1, figsize=figsize)
+
         self.axes = {plot[0]: axes for plot, axes in zip(plots, axl)}
+        for axes in self.axes.values():
+            axes.set_xscale(xscale)
+            axes.set_yscale(yscale)
         
     def plot_data(self, data, **pkwargs):
         for plot in self.plots:

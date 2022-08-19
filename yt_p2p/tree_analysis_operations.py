@@ -345,7 +345,10 @@ def region_projections(node, fields, weight_field=("gas", "density"),
             p.save(output_dir + "/" + output_key)
             del p
 
+    sphere.clear_data()
+    region.clear_data()
     if not particle_projections:
+        del sphere, region, ds
         return
 
     do_axes = \

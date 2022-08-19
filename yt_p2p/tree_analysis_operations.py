@@ -187,24 +187,34 @@ def node_sphere(node, ds=None,
 
 node_sphere.preprocess = _node_sphere_pre
 
-def node_icom(node):
-    sphere = get_node_sphere(node)
-    center = sphere_icom(sphere, 4*sphere["gas", "dx"].min(),
-                         com_kwargs=dict(use_particles=False, use_gas=True))
-    sphere.clear_data()
-    del sphere
-    center.convert_to_units("unitary")
-    for iax, ax in enumerate("xyz"):
-        node[f"icom_gas_position_{ax}"] = center[iax]
+def do_node_icom(node, itype):
+    if itype not in ("all", "gas"):
+        raise ValueError(f"itype ({itype}) must be either \"all\" or \"gas\".")
+
+    default = node.arbor.quan(-1, "unitary")
+    if all([node[f"icom_{itype}_position_{ax}"] > default for ax in "xyz"]):
+        return
+
+    if itype == "all":
+        com_kwargs = {"use_gas": True, "use_particles": True}
+    elif itype == "gas":
+        com_kwargs = {"use_gas": True, "use_particles": False}
+    else:
+        raise RuntimeError()
 
     sphere = get_node_sphere(node)
     center = sphere_icom(sphere, 4*sphere["gas", "dx"].min(),
-                         com_kwargs=dict(use_particles=True, use_gas=True))
+                         com_kwargs=com_kwargs)
     sphere.clear_data()
     del sphere
+
     center.convert_to_units("unitary")
     for iax, ax in enumerate("xyz"):
-        node[f"icom_all_position_{ax}"] = center[iax]
+        node[f"icom_{itype}_position_{ax}"] = center[iax]
+
+def node_icom(node):
+    for itype in ("all", "gas"):
+        do_node_icom(node, itype)
 
 def node_profile(node, bin_fields, profile_fields, weight_field,
                  data_object="sphere", profile_kwargs=None,

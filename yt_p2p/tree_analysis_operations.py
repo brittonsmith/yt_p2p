@@ -147,9 +147,8 @@ def _setsp(node, value):
 
 _sp_attrs = (
     "_sphere",
-    "_sphere_center",
+    "_sphere_center_field",
     "_sphere_radius",
-    "_sphere_ds",
 )
 
 def _delsp(node):
@@ -159,20 +158,17 @@ def _getsp(node):
     if node._sphere is not None:
         return node._sphere
 
-    if node._sphere_ds is None:
-        ds = node.ds
-    else:
-        ds = node._sphere_ds
-
-    center = reunit(ds, node._sphere_center, "unitary")
-    radius = reunit(ds, node._sphere_radius, "unitary")
+    ds = node.ds
+    center = reunit(ds, node[node._sphere_center_field], "unitary")
+    radius = ds.arr(*node._sphere_radius)
     node._sphere = ds.sphere(center, radius)
+    del center, radius, ds
     return node._sphere
 
 def _node_sphere_pre():
     TreeNode.sphere = property(fget=_getsp, fset=_setsp, fdel=_delsp)
 
-def node_sphere(node, ds=None,
+def node_sphere(node,
                 center_field="position",
                 radius=None,
                 radius_field="virial_radius",
@@ -180,10 +176,11 @@ def node_sphere(node, ds=None,
 
     if radius is None:
         radius = radius_factor * node[radius_field]
-    node._sphere_radius = radius
-    node._sphere_ds = ds
+        radius.convert_to_units("unitary")
+    node._sphere_radius = (radius.d, str(radius.units))
+    del radius
     node._sphere = None
-    node._sphere_center = node[center_field]
+    node._sphere_center_field = center_field
 
 node_sphere.preprocess = _node_sphere_pre
 

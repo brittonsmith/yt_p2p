@@ -8,7 +8,7 @@ import yaml
 import yt
 
 from pygrackle import FluidContainer
-from pygrackle.one_zone import MinihaloModel1D
+from pygrackle.one_zone import MinihaloModel, MinihaloModel1D
 from pygrackle.utilities.physical_constants import mass_hydrogen_cgs
 from pygrackle.yt_fields import \
      prepare_grackle_data, \
@@ -87,6 +87,7 @@ def prepare_model(mds, rds, start_time, profile_indices, fc=None):
     if 'de' in fc:
         fc['de'] *= (mp/me).d
 
+    mass_data["absolute_time"] = time_data[time_index:]
     mass_data["time"] = time_data[time_index:] - time_data[time_index]
     external_data["time"] = mass_data["time"].to("s").d / \
       fc.chemistry_data.time_units
@@ -95,7 +96,8 @@ def prepare_model(mds, rds, start_time, profile_indices, fc=None):
 
 
 def initialize_model_set(star_id, grackle_pars,
-                         data_dir="star_cubes"):
+                         data_dir="star_cubes",
+                         onezone=False):
     mass_cube_fn = os.path.join(data_dir, f"star_{star_id}_mass.h5")
     radius_cube_fn = os.path.join(data_dir, f"star_{star_id}_radius.h5")
 
@@ -108,14 +110,17 @@ def initialize_model_set(star_id, grackle_pars,
 
     i_max = mds.data['data', peak_field][time_index].argmax()
     mass_enclosed = mds.data['data', mass_field][time_index]
-    m_peak = mass_enclosed[i_max]
-    m_min = m_peak / 10
-    m_max = 2 * m_peak
-    model_indices = np.where((m_min <= mass_enclosed) & (mass_enclosed <= m_max))[0]
     print (f"Mass peak: {mass_enclosed[i_max]}")
-    print (f"Mass range: {mass_enclosed[model_indices[0]]} to "
-           f"{mass_enclosed[model_indices[-1]]} "
-           f"({model_indices.size} pts)")
+    if onezone:
+        model_indices = np.array([i_max])
+    else:
+        m_peak = mass_enclosed[i_max]
+        m_min = m_peak / 10
+        m_max = 2 * m_peak
+        model_indices = np.where((m_min <= mass_enclosed) & (mass_enclosed <= m_max))[0]
+        print (f"Mass range: {mass_enclosed[model_indices[0]]} to "
+               f"{mass_enclosed[model_indices[-1]]} "
+               f"({model_indices.size} pts)")
 
     prepare_grackle_data(mds, sim_type=EnzoDataset, parameters=grackle_pars)
 
@@ -151,9 +156,13 @@ def initialize_model_set(star_id, grackle_pars,
     return model_data, model_parameters
 
 
-def create_model(model_data, model_parameters, metallicity=None):
+def create_model(model_data, model_parameters, metallicity=None,
+                 get_external_data=False):
 
     mds, rds, start_time, model_indices = model_data
+    onezone = model_indices.size == 1
+    if onezone:
+        model_indices = model_indices[0]
 
     my_fc, external_data, full_data = prepare_model(
         mds, rds, start_time, model_indices)
@@ -180,12 +189,21 @@ def create_model(model_data, model_parameters, metallicity=None):
 
     run_parameters["external_data"] = external_data
 
-    model = MinihaloModel1D(
+    if onezone:
+        model_cls = MinihaloModel
+    else:
+        model_cls = MinihaloModel1D
+
+    model = model_cls(
         my_fc,
         **run_parameters,
     )
     model.verbose = 2
-    return model
+
+    if get_external_data:
+        return model, full_data
+    else:
+        return model
 
 def calculate_final_time(models, star_id, models_fn, model_data, model_parameters):
     if star_id not in models:
@@ -204,5 +222,6 @@ def calculate_final_time(models, star_id, models_fn, model_data, model_parameter
         final_time = model.current_time
         my_model["final_time"] = float(final_time)
 
-        with open(models_fn, mode="w") as f:
-            yaml.dump(models, stream=f)
+        if models_fn is not None:
+            with open(models_fn, mode="w") as f:
+                yaml.dump(models, stream=f)

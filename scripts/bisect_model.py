@@ -79,7 +79,7 @@ if __name__ == "__main__":
     }
 
     models_fn = "models.yaml"
-    base_output_dir = "minihalo_models"
+    base_output_dir = "minihalo_models/metallicity_grids"
     ensure_dir(base_output_dir)
 
     tolerance = 1e-3

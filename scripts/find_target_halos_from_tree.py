@@ -53,17 +53,13 @@ if __name__ == "__main__":
     ap.add_operation(delattrs, ["sphere"], always_do=True)
     ap.add_operation(garbage_collect, 60, always_do=True)
 
-    trees = list(a[:])
-    ds = None
-    for tree in ytree.parallel_trees(trees, dynamic=True, save_every=False):
-        if ds is not None:
-            tree.ds = ds
+    m_min = a.quan(1000, "Msun")
 
-        ap.process_target(tree)
+    trees = list(a[a["mass"] > m_min])
+    handoff_attrs = ["ds"]
 
-        if ds is None:
-            ds = tree.ds
-        del tree.ds
+    for tree in ytree.parallel_trees(trees, dynamic=False, save_every=False):
+        ap.process_target(tree, handoff_attrs=handoff_attrs)
 
     if yt.is_root():
         my_trees = [tree for tree in trees if tree["has_dense_gas"]]

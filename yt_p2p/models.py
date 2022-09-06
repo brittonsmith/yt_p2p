@@ -199,6 +199,7 @@ def create_model(model_data, model_parameters, metallicity=None,
         **run_parameters,
     )
     model.verbose = 2
+    model.absolute_start_time = start_time
 
     if get_external_data:
         return model, full_data

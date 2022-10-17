@@ -36,10 +36,10 @@ if __name__ == "__main__":
         "radiative_transfer_coupled_rate_solver": 0
     }
 
-    base_output_dir = "minihalo_models"
+    base_output_dir = "minihalo_models/metallicity_grids"
     ensure_dir(base_output_dir)
 
-    log_metallicities = np.linspace(-6, -3, 61)
+    log_metallicities = np.append(-np.inf, np.linspace(-6, -3, 61))
 
     models_fn = "models.yaml"
 
@@ -65,6 +65,8 @@ if __name__ == "__main__":
 
         for lZ in log_metallicities:
             my_metallicity = 10**lZ
+            if lZ == -np.inf:
+                my_metallicity = None
 
             filekey = f"model_lZ_{lZ:.2f}"
             filename = os.path.join(output_dir, f"{filekey}.h5")

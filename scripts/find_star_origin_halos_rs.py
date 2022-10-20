@@ -4,8 +4,12 @@ import yaml
 import yt
 import ytree
 
-from yt.extensions.p2p.misc import \
-    reunit
+from yt.extensions.p2p.misc import reunit
+
+def _relative_distance(field, data):
+    ptype = field.name[0]
+    return data[ptype, "particle_radius"] / \
+        data[ptype, "virial_radius"]
 
 if __name__ == "__main__":
     ds = yt.load('pop3/DD0560.h5')
@@ -16,24 +20,20 @@ if __name__ == "__main__":
 
     afn = "merger_trees/p2p_nd_rs/p2p_nd_rs.h5"
     a = ytree.load(afn)
-    m_min = a.quan(1e5, 'Msun')
-    my_trees = a[a['mass'] >= m_min]
+    a.ytds.add_field(
+        ("halos", "relative_distance"),
+        function=_relative_distance,
+        units="", sampling_type="local")
 
     data_dir = "."
     with open(os.path.join(data_dir, 'simulation.yaml'), 'r') as f:
         sim_data = yaml.load(f, Loader=yaml.FullLoader)
 
-    dfile = dict((snap['filename'], snap['Snap_idx'])
-                 for snap in sim_data)
-    dsnap = dict((val, key) for key, val in dfile.items())
-
     cts = ds.data['pop3', 'creation_time'].to('Myr')
-    ctsort = cts.argsort()
     star_ids = ds.data['pop3', 'particle_index'].d.astype(int)
 
     star_hosts = {}
-
-    for i in ctsort:
+    for i in range(cts.size):
         ifn = np.where(etimes > cts[i])[0][0]
         my_fn = efns[ifn]
         my_z = eredshifts[ifn]
@@ -41,43 +41,33 @@ if __name__ == "__main__":
         z_low = (my_z + eredshifts[ifn+1]) / 2
 
         my_pid = int(star_ids[i])
+        star_hosts[my_pid] = {'creation_time': str(cts[i])}
+        my_star = star_hosts[my_pid]
 
         yt.mylog.info(f'Finding host halo for star {my_pid}.')
 
         sfn = os.path.join('pop3', f"{my_fn.split('/')[-1]}.h5")
         sds = yt.load(sfn)
         istar = np.where(sds.data['pop3', 'particle_index'].d.astype(int) == my_pid)[0][0]
-        my_star_pos = reunit(a, sds.data['pop3', 'particle_position'][istar], 'unitary')
+        my_star_pos = sds.data['pop3', 'particle_position'][istar]
+        my_star_pos = reunit(a.ytds, my_star_pos, "unitary")
 
-        star_hosts[my_pid] = {'creation_time': str(cts[i])}
+        ad = a.ytds.all_data()
+        ad.set_field_parameter("center", my_star_pos)
+        selection = a.get_yt_selection(below=[("relative_distance", 1.0, ""),
+                                              ("redshift", float(z_high), "")],
+                                       above=[("redshift", float(z_low), "")],
+                                       data_source=ad)
+        nodes = list(a.get_nodes_from_selection(selection))
+        del selection, ad
 
-        for my_tree in my_trees:
-            in_ds = (my_tree['forest', 'redshift'] < z_high) & \
-                (my_tree['forest', 'redshift'] > z_low)
-            if not in_ds.any():
-                continue
-
-            d_star = np.sqrt(((my_tree['forest', 'position'][in_ds] - my_star_pos)**2).sum(axis=1))
-            r_halo = my_tree['forest', 'virial_radius'][in_ds]
-
-            in_halo = d_star <= r_halo
-            if not in_halo.any():
-                continue
-
-            ihalos = np.where(in_ds)[0][in_halo]
-            m_halo = my_tree['forest', 'mass'][ihalos]
-            ihalo = ihalos[m_halo.argmax()]
-            my_node = my_tree.get_node('forest', ihalo)
-
-            star_hosts[my_pid]['tree_id'] = my_node.tree_id
-            star_hosts[my_pid]['_arbor_index'] = int(my_node.root._arbor_index)
-            star_hosts[my_pid]['arbor'] = a.filename
-            break
-
-        if 'tree_id' in star_hosts[my_pid] is None:
-            yt.mylog.info(f'Host halo for star {my_pid} not found.')
+        if len(nodes) > 0:
+            yt.mylog.info(f"Found {len(nodes)} nodes for star {my_pid}.")
+            my_star["arbor"] = a.filename
+            my_star["tree_ids"] = [node.tree_id for node in nodes]
+            my_star["_arbor_indices"] = [int(node.root._arbor_index) for node in nodes]
         else:
-            yt.mylog.info(f'Host halo for star {my_pid}: {str(my_node)}.')
+            yt.mylog.info(f'Host halo for star {my_pid} not found.')
 
-    with open('star_hosts.yaml', mode='w') as f:
+    with open('star_hosts_rs.yaml', mode='w') as f:
         yaml.dump(star_hosts, stream=f)

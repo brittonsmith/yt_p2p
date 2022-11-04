@@ -51,6 +51,12 @@ def _total_dynamical_time(field, data):
     """
     return np.sqrt(3.0 * np.pi / (16.0 * data["gas", "matter_density"] * G))
 
+def _freefall_time(field, data):
+    return np.sqrt(3.0 * np.pi / (32.0 * data["gas", "density"] * G))
+
+def _sound_crossing_time(field, data):
+    return 2 * data["index", "radius"] / data["gas", "sound_speed"]
+
 def _tangential_velocity_magnitude(field, data):
     return np.sqrt(data["gas", "velocity_spherical_theta"]**2 +
                    data["gas", "velocity_spherical_phi"]**2)
@@ -104,6 +110,12 @@ def add_p2p_fields(ds):
                   units="Zsun", sampling_type="cell")
     add_p2p_field(ds, ("gas", "total_dynamical_time"),
                   function=_total_dynamical_time,
+                  units="s", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "freefall_time"),
+                  function=_freefall_time,
+                  units="s", sampling_type="cell")
+    add_p2p_field(ds, ("gas", "sound_crossing_time"),
+                  function=_sound_crossing_time,
                   units="s", sampling_type="cell")
     add_p2p_field(ds, ("gas", "vortical_time"),
                   function=_vortical_time,

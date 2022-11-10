@@ -1,0 +1,100 @@
+334267081:
+  _arbor_indices:
+  - 23736
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 144.58430868378517 Myr
+  tree_ids:
+  - 166118
+334267082:
+  _arbor_indices:
+  - 70321
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 211.17356961117193 Myr
+  tree_ids:
+  - 241303
+334267083:
+  _arbor_indices:
+  - 70321
+  - 70321
+  - 70321
+  - 70321
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 240.55742959508794 Myr
+  tree_ids:
+  - 178068
+  - 178942
+  - 178965
+  - 238971
+334267086:
+  _arbor_indices:
+  - 72286
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 252.61002188441256 Myr
+  tree_ids:
+  - 90795
+334267090:
+  _arbor_indices:
+  - 70028
+  - 70028
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 279.73719460074375 Myr
+  tree_ids:
+  - 37411
+  - 83718
+334267092:
+  _arbor_indices:
+  - 70028
+  - 70028
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 279.7377054002023 Myr
+  tree_ids:
+  - 37411
+  - 83718
+334267093:
+  _arbor_indices:
+  - 47808
+  - 47808
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 289.2971507641972 Myr
+  tree_ids:
+  - 91596
+  - 100592
+334267097:
+  _arbor_indices:
+  - 47808
+  - 47808
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 289.2976888648382 Myr
+  tree_ids:
+  - 91596
+  - 100592
+334267099:
+  _arbor_indices:
+  - 129481
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 312.7881109559928 Myr
+  tree_ids:
+  - 22758
+334267102:
+  _arbor_indices:
+  - 137032
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 344.5329058179473 Myr
+  tree_ids:
+  - 6561
+334267109:
+  _arbor_indices:
+  - 137032
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 344.533612252103 Myr
+  tree_ids:
+  - 6561
+334267111:
+  _arbor_indices:
+  - 69577
+  - 70947
+  arbor: merger_trees/p2p_nd_rs/p2p_nd_rs.h5
+  creation_time: 379.31289368322695 Myr
+  tree_ids:
+  - 73320
+  - 23014

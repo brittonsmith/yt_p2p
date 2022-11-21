@@ -4,7 +4,7 @@ import numpy as np
 import os
 import yt
 
-pyplot.rcParams['font.size'] = 14
+pyplot.rcParams['font.size'] = 16
 
 from grid_figure import GridFigure
 from yt.extensions.p2p.stars import get_star_data
@@ -28,8 +28,8 @@ if __name__ == "__main__":
 
     xlabel = "M$_{\\rm gas, enc}$ [M$_{\\odot}$]"
     my_fig = GridFigure(1, 1, figsize=(8, 5),
-                    left_buffer=0.12, right_buffer=0.02,
-                    bottom_buffer=0.12, top_buffer=0.02)
+                    left_buffer=0.12, right_buffer=0.03,
+                    bottom_buffer=0.14, top_buffer=0.02)
 
     my_axes = my_fig[0]
     my_axes.set_xscale("log")
@@ -58,17 +58,21 @@ if __name__ == "__main__":
         cs = profile_data["data", "sound_speed"][ilast, used]
         m_BE = (b * (cs**4 / G**1.5) * p**-0.5).to("Msun")
 
-        #color = pyplot.cm.turbo(float(i/(len(star_ids)-1)))
-        color = cmyt.pastel(float(i/(len(star_ids)-1)))
+        # cmap = pyplot.cm.turbo
+        # cmap = cmyt.pastel
+        cmap = cmyt.algae
+        color = cmap(float(i/(len(star_ids)-1)))
         alpha = 0.85
 
         my_axes.plot(m_gas_enc, m_gas_enc / m_BE, color=color, alpha=alpha,
-                     label=str(slabels[i]))
+                     linewidth=2, label=str(slabels[i]))
 
     my_axes.xaxis.set_label_text(xlabel)
     my_axes.yaxis.set_label_text("M$_{\\rm gas, enc}$ / M$_{\\rm BE}$")
     my_axes.xaxis.set_ticks(np.logspace(-3, 5, 9), minor=True, labels="")
     my_axes.legend(title="halo")
+    my_axes.set_ylim(1e-4, 3)
+    my_axes.set_xlim(1e-3, 1e5)
 
     # my_fig[0].legend(bbox_to_anchor=(1, 1.05), framealpha=0, title="t - t$_{*}$ [Myr]")
     # my_fig[1].yaxis.set_label_text("T [K]")

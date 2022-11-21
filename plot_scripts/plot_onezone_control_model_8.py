@@ -4,7 +4,7 @@ import numpy as np
 import os
 import yt
 
-pyplot.rcParams['font.size'] = 14
+pyplot.rcParams['font.size'] = 16
 
 from grid_figure import GridFigure
 from yt.extensions.p2p.stars import get_star_data

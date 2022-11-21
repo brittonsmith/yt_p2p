@@ -11,7 +11,7 @@ import ytree
 from ytree.data_structures.tree_container import TreeContainer
 from yt.extensions.p2p.tree_analysis_operations import get_progenitor_line
 
-pyplot.rcParams['font.size'] = 14
+pyplot.rcParams['font.size'] = 16
 
 from grid_figure import GridFigure
 from yt.extensions.p2p.stars import get_star_data
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     my_fig = GridFigure(3, 1, figsize=(8, 6),
                     left_buffer=0.15, right_buffer=0.2,
-                    bottom_buffer=0.1, top_buffer=0.09,
+                    bottom_buffer=0.1, top_buffer=0.1,
                     vertical_buffer=0, horizontal_buffer=0.12)
 
     for my_axes in my_fig:
@@ -255,4 +255,4 @@ if __name__ == "__main__":
     tx.set_xlim(*xlim)
     tx.xaxis.set_label_text("M$_{\\rm halo}$ [M$_{\\odot}$]")
 
-    pyplot.savefig(f"metallicity_model_{model_id}.pdf")
+    pyplot.savefig(f"metallicity_grids/metallicity_model_{model_id}.pdf")

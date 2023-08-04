@@ -115,7 +115,8 @@ def initialize_model_set(star_id, grackle_pars,
         model_indices = np.array([i_max])
     else:
         m_peak = mass_enclosed[i_max]
-        m_min = m_peak / 10
+        # m_min = m_peak / 10
+        m_min = mds.quan(5, "Msun")
         m_max = 2 * m_peak
         model_indices = np.where((m_min <= mass_enclosed) & (mass_enclosed <= m_max))[0]
         print (f"Mass range: {mass_enclosed[model_indices[0]]} to "
@@ -184,8 +185,9 @@ def create_model(model_data, model_parameters, metallicity=None,
       full_data['data', 'gas_mass_enclosed'].to('code_mass').d[0]
     run_parameters["initial_radius"] = \
       full_data['data', 'radius'].to('code_length').d[0]
-    run_parameters["max_density"] = 1e7 * mass_hydrogen_cgs / \
-      my_fc.chemistry_data.density_units
+    # run_parameters["max_density"] = 1e7 * mass_hydrogen_cgs / \
+    #   my_fc.chemistry_data.density_units
+    run_parameters["max_density"] = None
 
     run_parameters["external_data"] = external_data
 

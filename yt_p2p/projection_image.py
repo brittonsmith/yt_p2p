@@ -709,10 +709,10 @@ def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8),
             fig.text(f_text['x'], f_text['y'], f_text['s'], **f_text['kwargs'])
 
     if output_file is not None:
-        # fig.savefig(output_file, bbox_inches='tight', dpi=dpi,
-        #             facecolor=bg_color, edgecolor='none')
-        fig.savefig(output_file, dpi=dpi,
+        fig.savefig(output_file, bbox_inches='tight', dpi=dpi,
                     facecolor=bg_color, edgecolor='none')
+        # fig.savefig(output_file, dpi=dpi,
+        #             facecolor=bg_color, edgecolor='none')
         for panel in panels:
             if panel is not None:
                 if 'image' in panel: del panel['image']

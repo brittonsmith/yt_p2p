@@ -255,7 +255,7 @@ def make_phase_plot(
         field, units, cmap, clabel,
         xlim, xmajor, xminor, xscale, xlabel,
         ylim, ymajor, yminor, yscale, ylabel,
-        output_filename):
+        output_filename, save=True):
 
     my_axes.set_xscale(xscale)
     my_axes.set_yscale(yscale)
@@ -276,4 +276,5 @@ def make_phase_plot(
     draw_major_grid(my_axes, 'y', ymajor)
     my_axes.yaxis.set_label_text(ylabel)
 
-    pyplot.savefig(output_filename)
+    if save:
+        pyplot.savefig(output_filename)

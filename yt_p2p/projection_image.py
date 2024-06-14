@@ -10,7 +10,7 @@ import yt
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US')
 
-from yt.units.yt_array import YTQuantity
+from unyt import unyt_quantity
 
 def powformat_OLD(number, cofmt="%.1f", end=False):
     exponent = 1
@@ -86,21 +86,16 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
         cbar_tick_formatter = logformat
 
     proj_data = None
-    if 'filename' in panel and panel['filename'] is not None:
-        print ("Reading image data from %s." % panel['filename'])
-        ds = yt.load(panel["filename"])
+    if "ds" in panel or ('filename' in panel and panel['filename'] is not None):
+        if "ds" in panel:
+            ds = panel["ds"]
+        else:
+            print ("Reading image data from %s." % panel['filename'])
+            ds = yt.load(panel["filename"])
         proj_data = ds.data[panel['quantity']]
-        if panel.get("scale_to_rhom", False):
-            my_w = ds.parameters["width"]
-            my_dx2 = my_w**2 / np.prod(proj_data.shape)
-            rhom = ds.cosmology.omega_matter * \
-              ds.cosmology.critical_density(0) * (1 + ds.current_redshift)**3
-            proj_data /= my_dx2 * my_w * rhom
         if "length_bar" in panel and panel["length_bar"]:
-            my_length = ds.parameters["width"]
+            physical_width = ds.parameters["width"]
             current_redshift = ds.current_redshift
-            my_length *= (1. + current_redshift)
-        del ds
     elif 'data' in panel:
         proj_data = panel['data']
     else:
@@ -231,6 +226,9 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
         if "ceiling" in panel:
             panel["range"][1] = min(panel["ceiling"], panel["range"][1])
             image_max = panel["range"][1]
+
+        if "floor" in panel:
+            panel["range"][1] = max(panel["range"][1], panel["floor"])
 
         panel["image_max"] = image_max
 
@@ -494,15 +492,17 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                 panel["cax"].yaxis.set_label_text(panel["label"],
                                                   fontsize=fontsize,
                                                   color=text_color)
-                panel["cax"].yaxis.labelpad = -18
+                if cbar_position == "right":
+                    panel["cax"].yaxis.set_label_coords(5, 0.5)
+                elif cbar_position == "left":
+                    panel["cax"].yaxis.set_label_coords(-4, 0.5)
 
     if "length_bar" in panel and panel["length_bar"]:
         if "length_bar_scale" in panel:
-            print_length = YTQuantity(panel["length_bar_scale"],
-                                      panel["length_bar_units"])
+            print_length = panel["length_bar_scale"]
         else:
-            print_length = 0.4 * my_length
-            
+            print_length = 0.4 * physical_width
+
         if "length_bar_color" in panel:
             length_bar_color = panel["length_bar_color"]
         else:
@@ -517,7 +517,10 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                     print_units = "AU"
             else:
                 print_units = panel["length_bar_units"]
-        my_length.convert_to_units(print_units)
+        else:
+            print_units = str(print_length.units)
+
+        physical_width.convert_to_units(print_units)
 
         print_length_s = "%d %s" % \
           (print_length.in_units(print_units), print_units)
@@ -534,7 +537,7 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
             print_length_s2 = "%d %s'" % \
               (print_length2.in_units(print_units2), print_units2)
             
-        line_length = (print_length / my_length).in_units("") * proj_data.shape[0]
+        line_length = (print_length / physical_width).in_units("") * proj_data.shape[0]
         length_bar_vert = 725
         
         if "length_bar_left" in panel:
@@ -567,6 +570,8 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
         for text in panel['text']:
             panel['axes'].text(text['x'], text['y'], text['s'], **text['kwargs'])
 
+    if "ds" in panel:
+        del ds
     del proj_data
 
     if output_file is not None:

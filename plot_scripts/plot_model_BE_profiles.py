@@ -7,6 +7,7 @@ import yt
 pyplot.rcParams['font.size'] = 16
 
 from grid_figure import GridFigure
+from unyt import uvstack
 from yt.extensions.p2p.stars import get_star_data
 from yt.utilities.physical_constants import G
 from yt.visualization.color_maps import yt_colormaps
@@ -15,14 +16,26 @@ if __name__ == "__main__":
     star_ids = [
         334267081,
         334267082,
+        # 334267083,
         334267086,
         334267090,
         334267093,
         334267099,
         334267102,
+        # 334267111,
     ]
 
-    slabels = [1, 2, 4, 5, 6, 7, 8]
+    slabels = [
+        "1",
+        "2",
+        # "3",
+        "4",
+        "5/6",
+        "7/8",
+        "9",
+        "10/11",
+        # "12"
+    ]
 
     star_data = get_star_data("star_hosts.yaml")
 
@@ -52,11 +65,13 @@ if __name__ == "__main__":
         m_gas_enc = profile_data["data", "gas_mass_enclosed"][ilast, used].to("Msun")
 
         p = profile_data["data", "pressure"][ilast, used]
+        p_hyd = profile_data["data", "hydrostatic_pressure"][ilast, used]
 
         a = 1.67
         b = (225 / (32 * np.sqrt(5 * np.pi))) * a**-1.5
         cs = profile_data["data", "sound_speed"][ilast, used]
-        m_BE = (b * (cs**4 / G**1.5) * p**-0.5).to("Msun")
+        p_max = uvstack([p, p_hyd]).max(axis=0)
+        m_BE = (b * (cs**4 / G**1.5) * p_max**-0.5).to("Msun")
 
         # cmap = pyplot.cm.turbo
         # cmap = cmyt.pastel
@@ -71,7 +86,7 @@ if __name__ == "__main__":
     my_axes.yaxis.set_label_text("M$_{\\rm gas, enc}$ / M$_{\\rm BE}$")
     my_axes.xaxis.set_ticks(np.logspace(-3, 5, 9), minor=True, labels="")
     my_axes.legend(title="halo")
-    my_axes.set_ylim(1e-4, 3)
+    my_axes.set_ylim(1e-4, 5)
     my_axes.set_xlim(1e-3, 1e5)
 
     # my_fig[0].legend(bbox_to_anchor=(1, 1.05), framealpha=0, title="t - t$_{*}$ [Myr]")

@@ -12,6 +12,7 @@ from ytree.data_structures.tree_container import TreeContainer
 from yt.extensions.p2p.tree_analysis_operations import get_progenitor_line
 
 pyplot.rcParams['font.size'] = 16
+pyplot.rcParams["axes.axisbelow"] = False
 
 from grid_figure import GridFigure
 from yt.extensions.p2p.stars import get_star_data
@@ -56,13 +57,17 @@ if __name__ == "__main__":
 
     tolerance = 1e-3
     my_tol = f"{tolerance:g}"
+    my_evaluators = ["evaluate_model_collapsed", "evaluate_model_turnaround"]
+
+    solution_fns = []
+    solution_values = []
+
     if my_tol in my_solutions:
-        solution_fn = my_solutions[my_tol]["filename"]
-        solution_value = my_solutions[my_tol]["value"]
-        print (f"Solution ({my_tol}): {solution_value} - {solution_fn}")
-    else:
-        solution_fn = ""
-        solution_value = None
+        for my_evaluator in my_evaluators:
+            if my_evaluator in my_solutions[my_tol]:
+                solution_fns.append(my_solutions[my_tol][my_evaluator]["filename"])
+                solution_values.append(my_solutions[my_tol][my_evaluator]["value"])
+                print (f"Solution ({my_tol}): {solution_values[-1]} - {solution_fns[-1]}")
 
     star_dir = os.path.join(data_dir, f"star_{star_id}")
     co = Cosmology(
@@ -102,13 +107,19 @@ if __name__ == "__main__":
 
     # log_metallicities = [-np.inf, -4, -3.5, -3]
     # log_metallicities = np.concatenate([[-np.inf], np.linspace(-5, -3, 21)])
-    log_metallicities = np.linspace(-5, -3, 21)
+    log_metallicities = np.concatenate([np.linspace(-5, -3, 21), solution_values])
 
     dss = {}
     min_t = None
     max_t = None
-    for lZ in log_metallicities:
-        filekey = os.path.join(star_dir, f"model_lZ_{lZ:.2f}.h5")
+    isol = 0
+
+    for iZ, lZ in enumerate(log_metallicities):
+        if iZ >= log_metallicities.size - len(solution_fns):
+            filekey = solution_fns[isol]
+            isol += 1
+        else:
+            filekey = os.path.join(star_dir, f"model_lZ_{lZ:.2f}.h5")
         dss[lZ] = yt.load(filekey)
         ds = dss[lZ]
         t = ds.data["data", "time"].to("Myr") + \
@@ -116,14 +127,19 @@ if __name__ == "__main__":
         min_t = t.min() if min_t is None else min(min_t, t.min())
         max_t = t.max() if max_t is None else max(max_t, t.max())
 
-    ds = dss[log_metallicities[-1]]
+    ds = dss[solution_values[0]]
     be_ratio = ds.data["data", "gas_mass"] / ds.data["data", "bonnor_ebert_mass"][-1]
     icoord = be_ratio.argmax()
 
     xlim = (np.floor(min_t/10)*10, np.ceil(max_t/10)*10)
     for i, lZ in enumerate(log_metallicities):
         model_ds = dss[lZ]
-        color = pyplot.cm.turbo(i / (len(log_metallicities)-1))
+        if i > len(log_metallicities)- 1 - len(solution_fns):
+            color = "black"
+            linewidth = 2
+        else:
+            color = pyplot.cm.turbo(i / (len(log_metallicities)- 1 - len(solution_fns)))
+            linewidth = 1.5
         # color = pyplot.cm.turbo(i / 6)
 
         model_data = model_ds.data
@@ -137,10 +153,11 @@ if __name__ == "__main__":
 
         my_axes = my_fig[0]
         my_axes.plot(model_time, model_data["data", "density"][:, icoord], color=color,
-                     label=label)
+                     label=label, linewidth=linewidth)
 
         my_axes = my_fig[1]
-        my_axes.plot(model_time, model_data["data", "temperature"][:, icoord], color=color)
+        my_axes.plot(model_time, model_data["data", "temperature"][:, icoord], color=color,
+                     linewidth=linewidth)
         # my_z = co.z_from_t(model_ds.arr(xlim, "Myr"))
         # my_axes.plot(xlim, 2.73 * (1 + my_z), color="red", label="T$_{\\rm CMB}$")
 
@@ -151,7 +168,7 @@ if __name__ == "__main__":
                            model_data["data", "density"])
         model_m_BE = b * (model_cs**4 / G**1.5) * model_data["data", "pressure"]**-0.5
         model_BE_ratio = model_data["data", "gas_mass"] / model_m_BE
-        my_axes.plot(model_time, model_BE_ratio[:, icoord], color=color)
+        my_axes.plot(model_time, model_BE_ratio[:, icoord], color=color, linewidth=linewidth)
 
     my_fig[0].yaxis.set_label_text("$\\rho_{\\rm gas}$ [g/cm$^{3}$]")
     my_fig[0].yaxis.set_ticks(np.logspace(-23, -19, 3))
@@ -165,16 +182,17 @@ if __name__ == "__main__":
     my_fig[2].yaxis.set_label_text("M$_{\\rm gas, enc}$ / M$_{\\rm BE}$")
     my_fig[2].yaxis.set_ticks(np.logspace(-4, 0, 3))
     my_fig[2].yaxis.set_ticks(np.logspace(-3, -1, 2), minor=True, labels="")
-    my_fig[2].xaxis.set_ticks([my_star["creation_time"].d], labels="*", minor=True)
+    my_fig[2].xaxis.set_ticks([my_star["creation_time"].d], labels="*", minor=True, color="blue", fontsize=20)
 
     Z_min = log_metallicities[0]
-    Z_max = log_metallicities[-1]
+    Z_max = log_metallicities[-len(solution_values)-1]
+    # breakpoint()
     norm = colors.Normalize(vmin=Z_min, vmax=Z_max)
     # Z_vals = np.linspace(Z_min, Z_max, 41)
     cmap = "turbo"
     my_cax = my_fig.add_cax(my_fig[1], "right", length=2.95)
     cbar = mpl.colorbar.ColorbarBase(
-        my_cax, cmap=cmap, boundaries=log_metallicities,
+        my_cax, cmap=cmap, boundaries=log_metallicities[:-len(solution_values)],
         norm=norm, orientation='vertical')
 
     cbar.set_label("log$_{\\rm 10}$ (Z [Z$_{\\odot}$])")
@@ -182,9 +200,10 @@ if __name__ == "__main__":
     # my_ticks = list(np.linspace(-5, -3, 5))
     cbar.set_ticks(my_ticks)
     cbar.solids.set_edgecolor("face")
-    if solution_value is not None:
-        cbar.set_ticks([solution_value], minor=True)
-    my_cax.axhline(solution_value, color="black")
+    if solution_values:
+        cbar.set_ticks(solution_values, minor=True)
+    for solution_value in solution_values:
+        my_cax.axhline(solution_value, color="black", linewidth=2)
 
     for my_axes in my_fig:
         my_axes.set_xlim(*xlim)

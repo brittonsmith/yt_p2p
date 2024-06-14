@@ -195,8 +195,6 @@ if __name__ == "__main__":
         else:
             for ip in range(len(image_max)):
                 image_max[ip] = max(image_max[ip], my_image_max[ip])
-        print (my_image_max)
-        print (image_max)
         print ()
         pyplot.clf()
         pyplot.close("all")

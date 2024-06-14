@@ -23,8 +23,7 @@ class FakeDS:
         for attr, val in attrs.items():
             setattr(self, attr, val)
 
-def my_timeline(t_current, co, t_initial, t_final):
-    my_fig = pyplot.figure(figsize=(8, 8))
+def my_timeline(my_fig, t_current, co, t_initial, t_final):
     my_axes = my_fig.add_axes((left_timeline, bottom_timeline,
                                timeline_width, timeline_height),
                                facecolor="black")
@@ -37,7 +36,7 @@ def my_timeline(t_current, co, t_initial, t_final):
                                         20, 18, 16, 15, 14, 14,
                                         13, 12, 11, 10]),
                     text_color="white")
-    return my_fig
+    return my_axes
 
 def plot_box(axes, x, y, **kwargs):
     axes.plot([x[0], x[1]], [y[0], y[0]], **kwargs)
@@ -100,6 +99,10 @@ def fix_pmass(ds, field):
     d /= my_dx2 * my_w * rhom
     return d
 
+def my_sigmoid(x, x0, ymin, ymax, speed):
+    c = speed * (x - x0)
+    return (ymax - ymin) * (1 - np.exp(c) / (1 + np.exp(c))) + ymin
+
 if __name__ == "__main__":
     es = yt.load("simulation.h5")
     times = es.data["data", "time"]
@@ -124,7 +127,6 @@ if __name__ == "__main__":
     ensure_dir(output_dir)
     image_max = None
 
-    dt = es.quan(1, "Myr")
     my_time = times[1]
     iframe = 0
 
@@ -133,6 +135,9 @@ if __name__ == "__main__":
         i = np.clip(i, 0, times.size - 2)[0]
 
         my_redshift = es.cosmology.z_from_t(my_time)
+
+        dt = my_sigmoid(my_time.d, 145, 0.25, 5, 0.1)
+        dt = es.quan(dt, "Myr")
 
         ofn = os.path.join(output_dir, "frame_%04d.png" % iframe)
         # if os.path.exists(ofn):
@@ -182,12 +187,13 @@ if __name__ == "__main__":
             for ip in range(2):
                 my_panels[ip]["floor"] = image_max[ip]
 
-        my_fig = my_timeline(my_time, es.cosmology, t_initial, t_final)
+        my_fig = pyplot.figure(figsize=(8, 8))
+        t_axes = my_timeline(my_fig, my_time, es.cosmology, t_initial, t_final)
         my_fig = multi_image(my_panels, ofn, figsize=(8, 8), fontsize=12, dpi=200,
                              n_columns=2, bg_color="black", text_color="white",
                             fig=my_fig,
-                            bottom_buffer=0.1, top_buffer=0.0,
-                            left_buffer=0.12, right_buffer=0.12)
+                            bottom_buffer=0.0, top_buffer=0.01,
+                            left_buffer=0.15, right_buffer=0.15)
 
         my_image_max = [panel["image_max"] for panel in my_panels]
         if image_max is None:

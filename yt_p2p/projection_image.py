@@ -251,12 +251,12 @@ def single_image(panel, output_file, axes=None, fig=None,
             panel["range"][1] = panel["range"][0] * 1.001
             image_max = panel["range"][1]
 
+        if "floor" in panel:
+            panel["range"][1] = max(panel["range"][1], panel["floor"])
+
         if "ceiling" in panel:
             panel["range"][1] = min(panel["ceiling"], panel["range"][1])
             image_max = panel["range"][1]
-
-        if "floor" in panel:
-            panel["range"][1] = max(panel["range"][1], panel["floor"])
 
         panel["image_max"] = image_max
 

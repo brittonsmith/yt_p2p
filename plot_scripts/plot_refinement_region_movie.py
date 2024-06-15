@@ -1,8 +1,6 @@
 import copy
 import gc
-import glob
-import h5py
-from matplotlib.patches import Circle
+from matplotlib import pyplot
 import numpy as np
 import os
 import sys
@@ -15,28 +13,16 @@ mpl.rcParams['axes.unicode_minus'] = False
 mpl.rcParams['font.family'] = "monospace"
 
 from yt_p2p.misc import reunit
-from yt_p2p.timeline import *
-from yt_p2p.projection_image import *
+from yt_p2p.projection_image import \
+    multi_image, \
+    intcommaformat2, \
+    intcommaformat, \
+    powformat
 
 class FakeDS:
     def __init__(self, attrs):
         for attr, val in attrs.items():
             setattr(self, attr, val)
-
-def my_timeline(my_fig, t_current, co, t_initial, t_final):
-    my_axes = my_fig.add_axes((left_timeline, bottom_timeline,
-                               timeline_width, timeline_height),
-                               facecolor="black")
-    create_timeline(my_axes, co, t_initial, t_final,
-                    t_units="Myr",
-                    t_major=co.arr(np.arange(0, 501, 50), "Myr"),
-                    t_minor=co.arr(np.arange(0, 501, 10), "Myr"),
-                    t_current=t_current,
-                    redshifts=np.array([100, 50, 40, 30, 25, 22,
-                                        20, 18, 16, 15, 14, 14,
-                                        13, 12, 11, 10]),
-                    text_color="white")
-    return my_axes
 
 def plot_box(axes, x, y, **kwargs):
     axes.plot([x[0], x[1]], [y[0], y[0]], **kwargs)
@@ -61,13 +47,6 @@ def interpolate_proj(t, ds1, ds2, field, modifier=None):
     return ds1.arr(di, ds1.data[field].units)
 
 smallfont = 8
-
-top_timeline = 0.82
-bottom_timeline = 0.16
-left_timeline = 0.03
-right_timeline = 0.03
-timeline_width = 1.0 - left_timeline - right_timeline
-timeline_height = 1.0 - top_timeline - bottom_timeline
 
 panels = {}
 panels["dark_matter"] = {"quantity": ("data", "particle_mass"),
@@ -187,13 +166,18 @@ if __name__ == "__main__":
             for ip in range(2):
                 my_panels[ip]["floor"] = image_max[ip]
 
-        my_fig = pyplot.figure(figsize=(8, 8))
-        t_axes = my_timeline(my_fig, my_time, es.cosmology, t_initial, t_final)
-        my_fig = multi_image(my_panels, ofn, figsize=(8, 8), fontsize=12, dpi=200,
+        timeline = {"current_time": my_time,
+                    "initial_time": t_initial,
+                    "final_time": t_final,
+                    "cosmology": es.cosmology,
+                    "height": 0.03}
+
+        my_fig = multi_image(my_panels, ofn, figsize=(8, 7), fontsize=12, dpi=200,
                              n_columns=2, bg_color="black", text_color="white",
-                            fig=my_fig,
-                            bottom_buffer=0.0, top_buffer=0.01,
-                            left_buffer=0.15, right_buffer=0.15)
+                             bottom_buffer=0.18, top_buffer=0.01,
+                             left_buffer=0.15, right_buffer=0.15,
+                             timeline=timeline)
+        print (f"Figsize: {my_fig.figsize}.")
 
         my_image_max = [panel["image_max"] for panel in my_panels]
         if image_max is None:

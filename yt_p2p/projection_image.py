@@ -10,7 +10,10 @@ import yt
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US')
 
+from grid_figure import GridFigure
 from unyt import unyt_quantity
+
+from yt_p2p.timeline import create_timeline
 
 def powformat_OLD(number, cofmt="%.1f", end=False):
     exponent = 1
@@ -65,7 +68,33 @@ def clean_image(data, threshold):
         
     return data
 
-def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize=14,
+def my_timeline(my_fig, config):
+
+    height = config.get("height", 0.03)
+    bottom = config.get("bottom_buffer", 0.08)
+    h_buffer = config.get("horizontal_buffer", 0.03)
+
+    left = h_buffer
+    top = bottom + height
+    width = 1.0 - 2 * h_buffer
+
+    co = config["cosmology"]
+    my_axes = my_fig.figure.add_axes((left, bottom, width, height),
+                                     facecolor="black")
+    create_timeline(my_axes, config["cosmology"],
+                    config["current_time"], config["final_time"],
+                    t_units="Myr",
+                    t_major=co.arr(np.arange(0, 501, 50), "Myr"),
+                    t_minor=co.arr(np.arange(0, 501, 10), "Myr"),
+                    t_current=config["current_time"],
+                    redshifts=np.array([100, 50, 40, 30, 25, 22,
+                                        20, 18, 16, 15, 14, 14,
+                                        13, 12, 11, 10]),
+                    text_color="white")
+    return my_axes
+
+def single_image(panel, output_file, axes=None, fig=None,
+                 figsize=(8, 8), dpi=200, fontsize=14,
                  x_range=None, x_label=None, x_tick_label_format='%d', 
                  n_x_ticks=5, x_label_position='bottom', x_label_clip=None, 
                  y_range=None, y_label=None, y_tick_label_format='%d', 
@@ -79,7 +108,10 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                  side="left"):
     
     if fig is None:
-        pyplot.figure(figsize=figsize)
+        fig = GridFigure(
+            1, 1, figsize=figsize,
+            top_buffer=top_buffer, bottom_buffer=bottom_buffer,
+            left_buffer=left_buffer, right_buffer=right_buffer)
 
     cbar_tick_formatter = panel.get("cbar_tick_formatter")
     if cbar_tick_formatter is None:
@@ -116,13 +148,9 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
     else:
         log_field = panel['log_field']
 
-    panel_width = min((1.0 - left_buffer - right_buffer),
-                      (1.0 - top_buffer - bottom_buffer) * (proj_dim[0] / proj_dim[1]))
-    panel_height = panel_width * proj_dim[1] / proj_dim[0]
-
-    left_side = left_buffer
-    bottom_side = bottom_buffer
-    panel['axes'] = pyplot.axes((left_side, bottom_side, panel_width, panel_height))
+    if axes is None:
+        axes = fig[0]
+    panel['axes'] = axes
 
     if 'particle_overlay' in panel and \
             'cbar_position' in panel['particle_overlay']:
@@ -322,35 +350,11 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                 print ("ERROR: cbar_position must be 'top', 'bottom', 'left', or 'right'.")
                 return
 
-            if cbar_orientation == 'vertical':
-                if cbar_position == 'left':
-                    cax_left = left_side - (cbar_width * panel_width) - cbar_buffer
-                else:
-                    cax_left = left_side + panel_width + cbar_buffer
-                cax_bottom = bottom_side + (0.5 * panel_width * (1.0 - cbar_length))
-                cbar_horizontal = cbar_width * panel_width
-                cbar_vertical = cbar_length * panel_width
-                if log_field == 'double':
-                    negative_cax_left = cax_left
-                    negative_cax_bottom = cax_bottom
-                    cbar_vertical /= 2.
-                    cax_bottom += cbar_vertical
-            else:
-                if cbar_position == 'top':
-                    cax_bottom = bottom_side + panel_width
-                else:
-                    cax_bottom = bottom_side - (panel_width * cbar_width)
-                cax_left = left_side + (0.5 * panel_width * (1.0 - cbar_length))
-                cbar_horizontal = cbar_length * panel_width
-                cbar_vertical = cbar_width * panel_width
-                if log_field == 'double':
-                    negative_cax_left = cax_left
-                    negative_cax_bottom = cax_bottom
-                    cbar_horizontal /= 2.
-                    cax_left += cbar_horizontal
+            panel["cax"] = fig.add_cax(
+                panel["axes"], cbar_position,
+                buffer=cbar_buffer, length=cbar_length,
+                width=cbar_width)
 
-            panel['cax'] = pyplot.axes([cax_left, cax_bottom, 
-                                        cbar_horizontal, cbar_vertical])
             if log_field:
                 if log_field == 'double':
                     cbar_max_ticks = int(cbar_max_ticks / 2)
@@ -359,7 +363,6 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                 tick_step = max(1, np.ceil((tick_max - tick_min) /
                                            np.float(cbar_max_ticks)))
                 cbar_ticks = 10**np.arange(tick_min, tick_max, tick_step)
-                #import pdb ; pdb.set_trace()
                 if cbar_ticks.size == 0:
                     cbar_ticks = np.array(panel["range"])
                 else:
@@ -577,41 +580,40 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
     if output_file is not None:
         pyplot.savefig(output_file, bbox_inches='tight', dpi=dpi)
 
-def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8), 
-                dpi=200, fontsize=14, 
-                tick_range=None, tick_label=None, tick_label_format='%d', n_ticks=None, 
-                top_buffer=0.15, bottom_buffer=0.15, 
+def multi_image(panels, output_file, n_columns=2, figsize=(8, None),
+                dpi=200, fontsize=14,
+                tick_range=None, tick_label=None,
+                tick_label_format='%d', n_ticks=None,
+                top_buffer=0.15, bottom_buffer=0.15,
                 left_buffer=0.15, right_buffer=0.15,
-                cbar_orientation='vertical', fig_text=None, 
-                bg_color="white", text_color="black", **kwargs):
+                vertical_buffer=0, horizontal_buffer=0,
+                cbar_orientation='vertical', fig_text=None,
+                bg_color="white", text_color="black", timeline=None,
+                **kwargs):
 
     n_rows = np.int(np.ceil(len(panels) / n_columns))
 
-    vertical_buffer = 0
-    horizontal_buffer = 0
-    panel_height = (1.0 - top_buffer - bottom_buffer -
-                        ((n_rows-1)*vertical_buffer)) / \
-                        n_rows
-    panel_width = (1.0 - left_buffer - right_buffer -
-                       ((n_columns-1)*horizontal_buffer)) / \
-                       n_columns
+    my_fig = GridFigure(
+        n_rows, n_columns, figsize=figsize, square=True,
+        top_buffer=top_buffer, bottom_buffer=bottom_buffer,
+        left_buffer=left_buffer, right_buffer=right_buffer,
+        vertical_buffer=vertical_buffer,
+        horizontal_buffer=horizontal_buffer)
+
+    if timeline is not None:
+        tl_axes = my_timeline(my_fig, timeline)
 
     x_label_clip = None
     y_label_clip = None
     if n_rows > 1: y_label_clip = 'both'
     if n_columns > 1: x_label_clip = 'both'
 
-    if fig is None: fig = pyplot.figure(figsize=figsize)
-
     for i, panel in enumerate(panels):
-        if panel is None: continue
+        if panel is None:
+            continue
 
-        my_row = i // n_columns
-        my_column = i % n_columns
-
-        left_side = left_buffer + (my_column * panel_width)
-        top_side = 1.0 - (top_buffer + (my_row * panel_width))
-        bottom_side = top_side - panel_width
+        my_row, my_column, _ = my_fig._get_index(i)
+        my_axes = my_fig[i]
 
         show_cbar = True
         show_cbar_label = True
@@ -666,11 +668,8 @@ def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8),
             side = "right"
         else:
             side = "left"
-                
-        single_image(panel, None, fig=fig, fontsize=fontsize,
-                     bottom_buffer=bottom_side, left_buffer=left_side, 
-                     top_buffer=(1 - bottom_side - panel_width), 
-                     right_buffer=(1 - left_side - panel_width),
+
+        single_image(panel, None, fig=my_fig, axes=my_axes, fontsize=fontsize,
                      x_range=tick_range, x_label=x_label, 
                      x_label_position=x_label_position, 
                      n_x_ticks=n_ticks, 
@@ -711,20 +710,18 @@ def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8),
 
     if fig_text is not None:
         for f_text in fig_text:
-            fig.text(f_text['x'], f_text['y'], f_text['s'], **f_text['kwargs'])
+            my_fig.text(f_text['x'], f_text['y'], f_text['s'], **f_text['kwargs'])
 
     if output_file is not None:
-        # fig.savefig(output_file, bbox_inches='tight', dpi=dpi,
-        #             facecolor=bg_color, edgecolor='none')
-        fig.savefig(output_file, dpi=dpi,
-                    facecolor=bg_color, edgecolor='none')
+        my_fig.figure.savefig(output_file, dpi=dpi,
+                              facecolor=bg_color, edgecolor='none')
         for panel in panels:
             if panel is not None:
                 if 'image' in panel: del panel['image']
                 if 'cbar' in panel: del panel['cbar']
                 if 'cax' in panel: del panel['cax']
                 if 'axes' in panel: del panel['axes']
-    return fig
+    return my_fig
 
 def particle_overlay(pdict, my_axes, proj_dim, 
                      left_side, bottom_side, panel_width, 

@@ -102,7 +102,7 @@ if __name__ == "__main__":
     t_initial = es.quan(-0.5, "Myr")
 
     axis = "x"
-    output_dir = f"interpolate_frames_{axis}"
+    output_dir = f"frames_{axis}"
     ensure_dir(output_dir)
     image_max = None
 
@@ -194,3 +194,6 @@ if __name__ == "__main__":
         print (f"Collected {val} garbages!")
         my_time += dt
         iframe += 1
+
+    plot_cmd = "ffmpeg -i frames_x/frame_%04d.png -vcodec libx264 -vf scale=1280:-2,format=yuv420p movie.mp4"
+    print (f"Now run:\n\t {plot_cmd}")

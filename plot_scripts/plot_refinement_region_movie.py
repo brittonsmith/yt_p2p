@@ -24,13 +24,6 @@ class FakeDS:
         for attr, val in attrs.items():
             setattr(self, attr, val)
 
-def plot_box(axes, x, y, **kwargs):
-    axes.plot([x[0], x[1]], [y[0], y[0]], **kwargs)
-    axes.plot([x[0], x[1]], [y[1], y[1]], **kwargs)
-    axes.plot([x[0], x[0]], [y[0], y[1]], **kwargs)
-    axes.plot([x[1], x[1]], [y[0], y[1]], **kwargs)
-    return x[0], y[0]
-
 def interpolate_proj(t, ds1, ds2, field, modifier=None):
     t1 = ds1.current_time.to(t.units)
     t2 = ds2.current_time.to(t.units)
@@ -46,7 +39,21 @@ def interpolate_proj(t, ds1, ds2, field, modifier=None):
     di = np.power(10, m * (t - t1) + d1)
     return ds1.arr(di, ds1.data[field].units)
 
-smallfont = 8
+def fix_pmass(ds, field):
+    d = ds.data[field]
+    if field != ("data", "particle_mass"):
+        return d
+
+    my_w = ds.parameters["width"]
+    my_dx2 = my_w**2 / np.prod(d.shape)
+    rhom = ds.cosmology.omega_matter * \
+      ds.cosmology.critical_density(0) * (1 + ds.current_redshift)**3
+    d /= my_dx2 * my_w * rhom
+    return d
+
+def my_sigmoid(x, x0, ymin, ymax, speed):
+    c = speed * (x - x0)
+    return (ymax - ymin) * (1 - np.exp(c) / (1 + np.exp(c))) + ymin
 
 panels = {}
 panels["dark_matter"] = {"quantity": ("data", "particle_mass"),
@@ -65,22 +72,6 @@ panels["Metallicity3"] = {"quantity": ("data", "metallicity3"),
                           "range": [1e-8, "max"], "cmap": "kamae", "ceiling": 1e-2,
                           "label": "Z [Z$_{\\odot}$]",
                           "cbar_tick_formatter": powformat}
-
-def fix_pmass(ds, field):
-    d = ds.data[field]
-    if field != ("data", "particle_mass"):
-        return d
-
-    my_w = ds.parameters["width"]
-    my_dx2 = my_w**2 / np.prod(d.shape)
-    rhom = ds.cosmology.omega_matter * \
-      ds.cosmology.critical_density(0) * (1 + ds.current_redshift)**3
-    d /= my_dx2 * my_w * rhom
-    return d
-
-def my_sigmoid(x, x0, ymin, ymax, speed):
-    c = speed * (x - x0)
-    return (ymax - ymin) * (1 - np.exp(c) / (1 + np.exp(c))) + ymin
 
 if __name__ == "__main__":
     es = yt.load("simulation.h5")
@@ -104,6 +95,7 @@ if __name__ == "__main__":
     axis = "x"
     output_dir = f"frames_{axis}"
     ensure_dir(output_dir)
+    oformat = os.path.join(output_dir, "frame_%04d.png")
     image_max = None
 
     my_time = times[1]
@@ -118,7 +110,7 @@ if __name__ == "__main__":
         dt = my_sigmoid(my_time.d, 145, 0.25, 5, 0.1)
         dt = es.quan(dt, "Myr")
 
-        ofn = os.path.join(output_dir, "frame_%04d.png" % iframe)
+        ofn = oformat % iframe
         # if os.path.exists(ofn):
         #     my_time += dt
         #     iframe += 1
@@ -126,10 +118,6 @@ if __name__ == "__main__":
 
         fn1 = os.path.join(data_dir, f"{os.path.basename(fns[i])}_{axis}.h5")
         fn2 = os.path.join(data_dir, f"{os.path.basename(fns[i+1])}_{axis}.h5")
-
-    #     filename = os.path.join(data_dir, f"{os.path.basename(fn)}_{axis}.h5")
-    #     if not os.path.exists(filename):
-    #         continue
 
         print (f"Creating frame {iframe}: z = {my_redshift}, t = {my_time}, ",
                f"{fn1} - {fn2}.")
@@ -177,7 +165,7 @@ if __name__ == "__main__":
                              bottom_buffer=0.18, top_buffer=0.01,
                              left_buffer=0.15, right_buffer=0.15,
                              timeline=timeline)
-        print (f"Figsize: {my_fig.figsize}.")
+        # print (f"Figsize: {my_fig.figsize}.")
 
         my_image_max = [panel["image_max"] for panel in my_panels]
         if image_max is None:
@@ -195,5 +183,5 @@ if __name__ == "__main__":
         my_time += dt
         iframe += 1
 
-    plot_cmd = "ffmpeg -i frames_x/frame_%04d.png -vcodec libx264 -vf scale=1280:-2,format=yuv420p movie.mp4"
+    plot_cmd = f"ffmpeg -i {oformat} -vcodec libx264 -vf scale=1280:-2,format=yuv420p movie.mp4"
     print (f"Now run:\n\t {plot_cmd}")

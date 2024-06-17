@@ -4,6 +4,7 @@ from matplotlib import pyplot
 import numpy as np
 import os
 import sys
+import time
 import yt
 from yt.funcs import ensure_dir
 from yt.visualization.color_maps import *
@@ -69,7 +70,7 @@ panels["Temperature"] = {"quantity": ("data", "temperature"),
                          "label": "T [K]",
                          "cbar_tick_formatter": intcommaformat}
 panels["Metallicity3"] = {"quantity": ("data", "metallicity3"),
-                          "range": [1e-8, "max"], "cmap": "kamae", "ceiling": 1e-2,
+                          "range": [1e-8, "max"], "cmap": "kamae", "ceiling": 2e-2,
                           "label": "Z [Z$_{\\odot}$]",
                           "cbar_tick_formatter": powformat}
 
@@ -100,6 +101,7 @@ if __name__ == "__main__":
 
     my_time = times[1]
     iframe = 0
+    t1 = time.time()
 
     while my_time <= times[-1]:
         i = np.digitize([my_time], times) - 1
@@ -151,7 +153,7 @@ if __name__ == "__main__":
 
         # make image max increase monotonically to avoid flashing
         if image_max is not None:
-            for ip in range(2):
+            for ip in [0, 1, 3]:
                 my_panels[ip]["floor"] = image_max[ip]
 
         timeline = {"current_time": my_time,
@@ -178,8 +180,11 @@ if __name__ == "__main__":
         pyplot.close("all")
         del my_fig
 
-        val = gc.collect()
-        print (f"Collected {val} garbages!")
+        if time.time() - t1 > 30:
+            val = gc.collect()
+            print (f"Collected {val} garbages!")
+            t1 = time.time()
+
         my_time += dt
         iframe += 1
 

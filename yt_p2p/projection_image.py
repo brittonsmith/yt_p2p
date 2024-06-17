@@ -237,14 +237,13 @@ def single_image(panel, output_file, axes=None, fig=None,
                     image_min = None
             else:
                 image_min = proj_data.min()
-            panel['range'][0] = image_min
+            panel['range'][0] = float(image_min)
         else:
             image_min = panel['range'][0]
-            # image_min = max(image_min, proj_data.min())
             panel['range'][0] = image_min
         if panel['range'][1] == 'max':
             image_max = proj_data.max()
-            panel['range'][1] = image_max
+            panel['range'][1] = float(image_max)
         else:
             image_max = panel['range'][1]
         if panel["range"][0] > panel["range"][1]:
@@ -258,7 +257,7 @@ def single_image(panel, output_file, axes=None, fig=None,
             panel["range"][1] = min(panel["ceiling"], panel["range"][1])
             image_max = panel["range"][1]
 
-        panel["image_max"] = image_max
+        panel["image_max"] = float(image_max)
 
         if log_field == 'double':
             if panel['negative_range'] is None:

@@ -45,14 +45,13 @@ def load_model_profiles(star_id,
     times = es.data["time"].to("Myr")
     fns = es.data["filename"].astype(str)
 
-    global _model_stars
-    if _model_stars is None:
-        _model_stars = get_star_data(stars_fn)
-    star_data = _model_stars
-
     if star_id is None:
         ct = np.inf
     else:
+        global _model_stars
+        if _model_stars is None:
+            _model_stars = get_star_data(stars_fn)
+        star_data = _model_stars
         ct = star_data[star_id]["creation_time"]
 
     dsfns = defaultdict(list)

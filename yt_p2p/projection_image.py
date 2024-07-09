@@ -171,13 +171,12 @@ def single_image(panel, output_file, axes=None, fig=None,
         elif x_label_position == 'bottom':
              panel['axes'].xaxis.tick_bottom()
         panel['axes'].xaxis.set_ticks_position('both')
+        panel["axes"].xaxis.set_tick_params(direction="in")
         tick_labels = panel['axes'].xaxis.get_ticklabels()
         for tick_label in tick_labels:
             tick_label.set_color(text_color)
             tick_label.set_size(fontsize)
-        ticks = panel["axes"].xaxis.get_ticks()
-        for tick in ticks:
-            tick.set_color(text_color)
+            tick_label.set_color(text_color)
         if x_label_clip is not None:
             if x_label_clip == 'left' or x_label_clip == 'both':
                 tick_labels[0].set_visible(False)
@@ -198,13 +197,12 @@ def single_image(panel, output_file, axes=None, fig=None,
         elif y_label_position == 'left':
             panel['axes'].yaxis.tick_left()
         panel['axes'].yaxis.set_ticks_position('both')
+        panel["axes"].yaxis.set_tick_params(direction="in")
         tick_labels = panel['axes'].yaxis.get_ticklabels()
         for tick_label in tick_labels:
             tick_label.set_color(text_color)
             tick_label.set_size(fontsize)
-        ticks = panel["axes"].xaxis.get_ticks()
-        for tick in ticks:
-            tick.set_color(text_color)
+            tick_label.set_color(text_color)
         if y_label_clip is not None:
             if y_label_clip == 'bottom' or y_label_clip == 'both':
                 tick_labels[0].set_visible(False)
@@ -365,8 +363,10 @@ def single_image(panel, output_file, axes=None, fig=None,
                 if cbar_ticks.size == 0:
                     cbar_ticks = np.array(panel["range"])
                 else:
-                    cbar_ticks = np.concatenate([[panel["range"][0]], cbar_ticks,
-                                                 [panel["range"][1]]])
+                    if not np.allclose(cbar_ticks[0], panel["range"][0], atol=0):
+                        cbar_ticks = np.concatenate([[panel["range"][0]], cbar_ticks])
+                    if not np.allclose(cbar_ticks[-1], panel["range"][1], atol=0):
+                        cbar_ticks = np.concatenate([cbar_ticks, [panel["range"][1]]])
                 cbar_ticks = np.concatenate([cbar_ticks, [panel["range"][1]]])
             else:
                 cbar_ticks = None
@@ -413,43 +413,14 @@ def single_image(panel, output_file, axes=None, fig=None,
                     ticklabel.set_size(0.75 * fontsize)
                     ticklabel.set_verticalalignment("center")
                     ticklabel.set_horizontalalignment(side)
-                ticklabels[0].set_size(0.75 * fontsize)
-                ticklabels[0].set_verticalalignment("top")
-                ticklabels[-2].set_size(0.75 * fontsize)
-                ticklabels[-2].set_verticalalignment("top")
-                ticklabels[-1].set_alpha(0.0)
-                ticklabels[-2].set_alpha(0.0)
-                ticklabels[0].set_alpha(0.0)
+                # ticklabels[0].set_size(0.75 * fontsize)
+                # ticklabels[0].set_verticalalignment("top")
+                # ticklabels[-2].set_size(0.75 * fontsize)
+                # ticklabels[-2].set_verticalalignment("top")
+                # ticklabels[-1].set_alpha(0.0)
+                # ticklabels[-2].set_alpha(0.0)
+                # ticklabels[0].set_alpha(0.0)
                 
-                if log_field == 'double':
-                    for ticklabel in panel['negative_cbar'].ax.get_yticklabels(): 
-                        ticklabel.set_color(text_color)
-                        ticklabel.set_size(fontsize)
-                if cbar_ticks is not None:
-                    cbar_labels = [cbar_tick_formatter(my_t) for my_t in cbar_ticks]
-                    cbar_labels[0] = cbar_tick_formatter(cbar_ticks[0], end=True)
-                    cbar_labels[-2] = cbar_tick_formatter(cbar_ticks[-1], end=True)
-                    cbar_labels[-1] = "___________"
-                    panel['cbar'].ax.set_yticklabels(cbar_labels)
-                    if cbar_position == "right":
-                        tx = image_dims[0] * 1.075 # 860 # 1053
-                        ha = "left"
-                    else:
-                        tx = image_dims[0] * -0.075 # -0.1125 # -90 # -250
-                        ha = "right"
-                    ty1 = 0.0375 * image_dims[1]
-                    ty2 = image_dims[1]
-                    panel["axes"].text(
-                        tx, ty1, cbar_tick_formatter(cbar_ticks[0], end=True),
-                        verticalalignment="top", horizontalalignment=ha,
-                        fontsize=(0.75*fontsize), color="white")
-                    panel["axes"].text(
-                        tx, ty2, cbar_tick_formatter(cbar_ticks[-1], end=True),
-                        verticalalignment="top", horizontalalignment=ha,
-                        fontsize=(0.75*fontsize), color="white")
-                    if log_field == 'double':
-                        panel['negative_cbar'].ax.set_yticklabels(map(cbar_tick_formatter,
-                                                                      negative_cbar_ticks))
             else:
                 if cbar_position == 'top':
                     panel['cax'].xaxis.set_label_position('top')
@@ -495,9 +466,9 @@ def single_image(panel, output_file, axes=None, fig=None,
                                                   fontsize=fontsize,
                                                   color=text_color)
                 if cbar_position == "right":
-                    panel["cax"].yaxis.set_label_coords(5, 0.5)
+                    panel["cax"].yaxis.set_label_coords(4.2, 0.5)
                 elif cbar_position == "left":
-                    panel["cax"].yaxis.set_label_coords(-4, 0.5)
+                    panel["cax"].yaxis.set_label_coords(-3.2, 0.5)
 
     if "length_bar" in panel and panel["length_bar"]:
         if "length_bar_scale" in panel:
@@ -621,7 +592,7 @@ def multi_image(panels, output_file, n_columns=2, figsize=(8, None),
             show_cbar = False
         else:
             if cbar_orientation == 'vertical':
-                show_cbar_label = True
+                # show_cbar_label = True
                 y_label = None
                 y_label_position = None
                 if my_column == 0:
@@ -683,29 +654,6 @@ def multi_image(panels, output_file, n_columns=2, figsize=(8, None),
                      cbar_position=cbar_position, text_color=text_color,
                      side=side,
                      **kwargs)
-
-        if 'label' in panel:
-            if cbar_orientation == 'vertical' and \
-                    (my_column == 0 or my_column == n_columns - 1):
-                if my_column == 0:
-                    panel['axes'].yaxis.set_label_position('left')
-                elif my_column == n_columns - 1:
-                    panel['axes'].yaxis.set_label_position('right')
-                panel['axes'].yaxis.labelpad = 35
-                panel['axes'].yaxis.set_label_text(panel['label'], fontsize=fontsize,
-                                                   color=text_color)
-
-            elif cbar_orientation == 'horizontal' and \
-                'log_field' in panel and \
-                panel['log_field'] == 'double' and \
-                (my_row == 0 or my_row == n_rows -1):
-                if my_row == 0:
-                    panel['axes'].xaxis.set_label_position('top')
-                elif my_row == n_rows - 1:
-                    panel['axes'].xaxis.set_label_position('bottom')
-                panel['axes'].xaxis.labelpad = 35
-                panel['axes'].xaxis.set_label_text(panel['label'], fontsize=fontsize,
-                                                   color=text_color)
 
     if fig_text is not None:
         for f_text in fig_text:

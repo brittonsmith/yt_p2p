@@ -10,7 +10,10 @@ import yt
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US')
 
-from yt.units.yt_array import YTQuantity
+from grid_figure import GridFigure
+from unyt import unyt_quantity
+
+from yt_p2p.timeline import create_timeline
 
 def powformat_OLD(number, cofmt="%.1f", end=False):
     exponent = 1
@@ -65,7 +68,33 @@ def clean_image(data, threshold):
         
     return data
 
-def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize=14,
+def my_timeline(my_fig, config):
+
+    height = config.get("height", 0.03)
+    bottom = config.get("bottom_buffer", 0.08)
+    h_buffer = config.get("horizontal_buffer", 0.03)
+
+    left = h_buffer
+    top = bottom + height
+    width = 1.0 - 2 * h_buffer
+
+    co = config["cosmology"]
+    my_axes = my_fig.figure.add_axes((left, bottom, width, height),
+                                     facecolor="black")
+    create_timeline(my_axes, config["cosmology"],
+                    config["current_time"], config["final_time"],
+                    t_units="Myr",
+                    t_major=co.arr(np.arange(0, 501, 50), "Myr"),
+                    t_minor=co.arr(np.arange(0, 501, 10), "Myr"),
+                    t_current=config["current_time"],
+                    redshifts=np.array([100, 50, 40, 30, 25, 22,
+                                        20, 18, 16, 15, 14, 14,
+                                        13, 12, 11, 10]),
+                    text_color="white")
+    return my_axes
+
+def single_image(panel, output_file, axes=None, fig=None,
+                 figsize=(8, 8), dpi=200, fontsize=14,
                  x_range=None, x_label=None, x_tick_label_format='%d', 
                  n_x_ticks=5, x_label_position='bottom', x_label_clip=None, 
                  y_range=None, y_label=None, y_tick_label_format='%d', 
@@ -79,28 +108,26 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                  side="left"):
     
     if fig is None:
-        pyplot.figure(figsize=figsize)
+        fig = GridFigure(
+            1, 1, figsize=figsize,
+            top_buffer=top_buffer, bottom_buffer=bottom_buffer,
+            left_buffer=left_buffer, right_buffer=right_buffer)
 
     cbar_tick_formatter = panel.get("cbar_tick_formatter")
     if cbar_tick_formatter is None:
         cbar_tick_formatter = logformat
 
     proj_data = None
-    if 'filename' in panel and panel['filename'] is not None:
-        print ("Reading image data from %s." % panel['filename'])
-        ds = yt.load(panel["filename"])
+    if "ds" in panel or ('filename' in panel and panel['filename'] is not None):
+        if "ds" in panel:
+            ds = panel["ds"]
+        else:
+            print ("Reading image data from %s." % panel['filename'])
+            ds = yt.load(panel["filename"])
         proj_data = ds.data[panel['quantity']]
-        if panel.get("scale_to_rhom", False):
-            my_w = ds.parameters["width"]
-            my_dx2 = my_w**2 / np.prod(proj_data.shape)
-            rhom = ds.cosmology.omega_matter * \
-              ds.cosmology.critical_density(0) * (1 + ds.current_redshift)**3
-            proj_data /= my_dx2 * my_w * rhom
         if "length_bar" in panel and panel["length_bar"]:
-            my_length = ds.parameters["width"]
+            physical_width = ds.parameters["width"]
             current_redshift = ds.current_redshift
-            my_length *= (1. + current_redshift)
-        del ds
     elif 'data' in panel:
         proj_data = panel['data']
     else:
@@ -121,13 +148,9 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
     else:
         log_field = panel['log_field']
 
-    panel_width = min((1.0 - left_buffer - right_buffer),
-                      (1.0 - top_buffer - bottom_buffer) * (proj_dim[0] / proj_dim[1]))
-    panel_height = panel_width * proj_dim[1] / proj_dim[0]
-
-    left_side = left_buffer
-    bottom_side = bottom_buffer
-    panel['axes'] = pyplot.axes((left_side, bottom_side, panel_width, panel_height))
+    if axes is None:
+        axes = fig[0]
+    panel['axes'] = axes
 
     if 'particle_overlay' in panel and \
             'cbar_position' in panel['particle_overlay']:
@@ -148,13 +171,12 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
         elif x_label_position == 'bottom':
              panel['axes'].xaxis.tick_bottom()
         panel['axes'].xaxis.set_ticks_position('both')
+        panel["axes"].xaxis.set_tick_params(direction="in")
         tick_labels = panel['axes'].xaxis.get_ticklabels()
         for tick_label in tick_labels:
             tick_label.set_color(text_color)
             tick_label.set_size(fontsize)
-        ticks = panel["axes"].xaxis.get_ticks()
-        for tick in ticks:
-            tick.set_color(text_color)
+            tick_label.set_color(text_color)
         if x_label_clip is not None:
             if x_label_clip == 'left' or x_label_clip == 'both':
                 tick_labels[0].set_visible(False)
@@ -175,13 +197,12 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
         elif y_label_position == 'left':
             panel['axes'].yaxis.tick_left()
         panel['axes'].yaxis.set_ticks_position('both')
+        panel["axes"].yaxis.set_tick_params(direction="in")
         tick_labels = panel['axes'].yaxis.get_ticklabels()
         for tick_label in tick_labels:
             tick_label.set_color(text_color)
             tick_label.set_size(fontsize)
-        ticks = panel["axes"].xaxis.get_ticks()
-        for tick in ticks:
-            tick.set_color(text_color)
+            tick_label.set_color(text_color)
         if y_label_clip is not None:
             if y_label_clip == 'bottom' or y_label_clip == 'both':
                 tick_labels[0].set_visible(False)
@@ -214,25 +235,27 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                     image_min = None
             else:
                 image_min = proj_data.min()
-            panel['range'][0] = image_min
+            panel['range'][0] = float(image_min)
         else:
             image_min = panel['range'][0]
-            # image_min = max(image_min, proj_data.min())
             panel['range'][0] = image_min
         if panel['range'][1] == 'max':
             image_max = proj_data.max()
-            panel['range'][1] = image_max
+            panel['range'][1] = float(image_max)
         else:
             image_max = panel['range'][1]
         if panel["range"][0] > panel["range"][1]:
             panel["range"][1] = panel["range"][0] * 1.001
             image_max = panel["range"][1]
 
+        if "floor" in panel:
+            panel["range"][1] = max(panel["range"][1], panel["floor"])
+
         if "ceiling" in panel:
             panel["range"][1] = min(panel["ceiling"], panel["range"][1])
             image_max = panel["range"][1]
 
-        panel["image_max"] = image_max
+        panel["image_max"] = float(image_max)
 
         if log_field == 'double':
             if panel['negative_range'] is None:
@@ -324,35 +347,11 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                 print ("ERROR: cbar_position must be 'top', 'bottom', 'left', or 'right'.")
                 return
 
-            if cbar_orientation == 'vertical':
-                if cbar_position == 'left':
-                    cax_left = left_side - (cbar_width * panel_width) - cbar_buffer
-                else:
-                    cax_left = left_side + panel_width + cbar_buffer
-                cax_bottom = bottom_side + (0.5 * panel_width * (1.0 - cbar_length))
-                cbar_horizontal = cbar_width * panel_width
-                cbar_vertical = cbar_length * panel_width
-                if log_field == 'double':
-                    negative_cax_left = cax_left
-                    negative_cax_bottom = cax_bottom
-                    cbar_vertical /= 2.
-                    cax_bottom += cbar_vertical
-            else:
-                if cbar_position == 'top':
-                    cax_bottom = bottom_side + panel_width
-                else:
-                    cax_bottom = bottom_side - (panel_width * cbar_width)
-                cax_left = left_side + (0.5 * panel_width * (1.0 - cbar_length))
-                cbar_horizontal = cbar_length * panel_width
-                cbar_vertical = cbar_width * panel_width
-                if log_field == 'double':
-                    negative_cax_left = cax_left
-                    negative_cax_bottom = cax_bottom
-                    cbar_horizontal /= 2.
-                    cax_left += cbar_horizontal
+            panel["cax"] = fig.add_cax(
+                panel["axes"], cbar_position,
+                buffer=cbar_buffer, length=cbar_length,
+                width=cbar_width)
 
-            panel['cax'] = pyplot.axes([cax_left, cax_bottom, 
-                                        cbar_horizontal, cbar_vertical])
             if log_field:
                 if log_field == 'double':
                     cbar_max_ticks = int(cbar_max_ticks / 2)
@@ -361,12 +360,13 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                 tick_step = max(1, np.ceil((tick_max - tick_min) /
                                            np.float(cbar_max_ticks)))
                 cbar_ticks = 10**np.arange(tick_min, tick_max, tick_step)
-                #import pdb ; pdb.set_trace()
                 if cbar_ticks.size == 0:
                     cbar_ticks = np.array(panel["range"])
                 else:
-                    cbar_ticks = np.concatenate([[panel["range"][0]], cbar_ticks,
-                                                 [panel["range"][1]]])
+                    if not np.allclose(cbar_ticks[0], panel["range"][0], atol=0):
+                        cbar_ticks = np.concatenate([[panel["range"][0]], cbar_ticks])
+                    if not np.allclose(cbar_ticks[-1], panel["range"][1], atol=0):
+                        cbar_ticks = np.concatenate([cbar_ticks, [panel["range"][1]]])
                 cbar_ticks = np.concatenate([cbar_ticks, [panel["range"][1]]])
             else:
                 cbar_ticks = None
@@ -413,43 +413,14 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                     ticklabel.set_size(0.75 * fontsize)
                     ticklabel.set_verticalalignment("center")
                     ticklabel.set_horizontalalignment(side)
-                ticklabels[0].set_size(0.75 * fontsize)
-                ticklabels[0].set_verticalalignment("top")
-                ticklabels[-2].set_size(0.75 * fontsize)
-                ticklabels[-2].set_verticalalignment("top")
-                ticklabels[-1].set_alpha(0.0)
-                ticklabels[-2].set_alpha(0.0)
-                ticklabels[0].set_alpha(0.0)
+                # ticklabels[0].set_size(0.75 * fontsize)
+                # ticklabels[0].set_verticalalignment("top")
+                # ticklabels[-2].set_size(0.75 * fontsize)
+                # ticklabels[-2].set_verticalalignment("top")
+                # ticklabels[-1].set_alpha(0.0)
+                # ticklabels[-2].set_alpha(0.0)
+                # ticklabels[0].set_alpha(0.0)
                 
-                if log_field == 'double':
-                    for ticklabel in panel['negative_cbar'].ax.get_yticklabels(): 
-                        ticklabel.set_color(text_color)
-                        ticklabel.set_size(fontsize)
-                if cbar_ticks is not None:
-                    cbar_labels = [cbar_tick_formatter(my_t) for my_t in cbar_ticks]
-                    cbar_labels[0] = cbar_tick_formatter(cbar_ticks[0], end=True)
-                    cbar_labels[-2] = cbar_tick_formatter(cbar_ticks[-1], end=True)
-                    cbar_labels[-1] = "___________"
-                    panel['cbar'].ax.set_yticklabels(cbar_labels)
-                    if cbar_position == "right":
-                        tx = image_dims[0] * 1.075 # 860 # 1053
-                        ha = "left"
-                    else:
-                        tx = image_dims[0] * -0.075 # -0.1125 # -90 # -250
-                        ha = "right"
-                    ty1 = 0.0375 * image_dims[1]
-                    ty2 = image_dims[1]
-                    panel["axes"].text(
-                        tx, ty1, cbar_tick_formatter(cbar_ticks[0], end=True),
-                        verticalalignment="top", horizontalalignment=ha,
-                        fontsize=(0.75*fontsize), color="white")
-                    panel["axes"].text(
-                        tx, ty2, cbar_tick_formatter(cbar_ticks[-1], end=True),
-                        verticalalignment="top", horizontalalignment=ha,
-                        fontsize=(0.75*fontsize), color="white")
-                    if log_field == 'double':
-                        panel['negative_cbar'].ax.set_yticklabels(map(cbar_tick_formatter,
-                                                                      negative_cbar_ticks))
             else:
                 if cbar_position == 'top':
                     panel['cax'].xaxis.set_label_position('top')
@@ -494,15 +465,17 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                 panel["cax"].yaxis.set_label_text(panel["label"],
                                                   fontsize=fontsize,
                                                   color=text_color)
-                panel["cax"].yaxis.labelpad = -18
+                if cbar_position == "right":
+                    panel["cax"].yaxis.set_label_coords(4.2, 0.5)
+                elif cbar_position == "left":
+                    panel["cax"].yaxis.set_label_coords(-3.2, 0.5)
 
     if "length_bar" in panel and panel["length_bar"]:
         if "length_bar_scale" in panel:
-            print_length = YTQuantity(panel["length_bar_scale"],
-                                      panel["length_bar_units"])
+            print_length = panel["length_bar_scale"]
         else:
-            print_length = 0.4 * my_length
-            
+            print_length = 0.4 * physical_width
+
         if "length_bar_color" in panel:
             length_bar_color = panel["length_bar_color"]
         else:
@@ -517,7 +490,10 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
                     print_units = "AU"
             else:
                 print_units = panel["length_bar_units"]
-        my_length.convert_to_units(print_units)
+        else:
+            print_units = str(print_length.units)
+
+        physical_width.convert_to_units(print_units)
 
         print_length_s = "%d %s" % \
           (print_length.in_units(print_units), print_units)
@@ -534,7 +510,7 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
             print_length_s2 = "%d %s'" % \
               (print_length2.in_units(print_units2), print_units2)
             
-        line_length = (print_length / my_length).in_units("") * proj_data.shape[0]
+        line_length = (print_length / physical_width).in_units("") * proj_data.shape[0]
         length_bar_vert = 725
         
         if "length_bar_left" in panel:
@@ -567,46 +543,47 @@ def single_image(panel, output_file, fig=None, figsize=(8, 8), dpi=200, fontsize
         for text in panel['text']:
             panel['axes'].text(text['x'], text['y'], text['s'], **text['kwargs'])
 
+    if "ds" in panel:
+        del ds
     del proj_data
 
     if output_file is not None:
         pyplot.savefig(output_file, bbox_inches='tight', dpi=dpi)
 
-def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8), 
-                dpi=200, fontsize=14, 
-                tick_range=None, tick_label=None, tick_label_format='%d', n_ticks=None, 
-                top_buffer=0.15, bottom_buffer=0.15, 
+def multi_image(panels, output_file, n_columns=2, figsize=(8, None),
+                dpi=200, fontsize=14,
+                tick_range=None, tick_label=None,
+                tick_label_format='%d', n_ticks=None,
+                top_buffer=0.15, bottom_buffer=0.15,
                 left_buffer=0.15, right_buffer=0.15,
-                cbar_orientation='vertical', fig_text=None, 
-                bg_color="white", text_color="black", **kwargs):
+                vertical_buffer=0, horizontal_buffer=0,
+                cbar_orientation='vertical', fig_text=None,
+                bg_color="white", text_color="black", timeline=None,
+                **kwargs):
 
     n_rows = np.int(np.ceil(len(panels) / n_columns))
 
-    vertical_buffer = 0
-    horizontal_buffer = 0
-    panel_height = (1.0 - top_buffer - bottom_buffer -
-                        ((n_rows-1)*vertical_buffer)) / \
-                        n_rows
-    panel_width = (1.0 - left_buffer - right_buffer -
-                       ((n_columns-1)*horizontal_buffer)) / \
-                       n_columns
+    my_fig = GridFigure(
+        n_rows, n_columns, figsize=figsize, square=True,
+        top_buffer=top_buffer, bottom_buffer=bottom_buffer,
+        left_buffer=left_buffer, right_buffer=right_buffer,
+        vertical_buffer=vertical_buffer,
+        horizontal_buffer=horizontal_buffer)
+
+    if timeline is not None:
+        tl_axes = my_timeline(my_fig, timeline)
 
     x_label_clip = None
     y_label_clip = None
     if n_rows > 1: y_label_clip = 'both'
     if n_columns > 1: x_label_clip = 'both'
 
-    if fig is None: fig = pyplot.figure(figsize=figsize)
-
     for i, panel in enumerate(panels):
-        if panel is None: continue
+        if panel is None:
+            continue
 
-        my_row = i // n_columns
-        my_column = i % n_columns
-
-        left_side = left_buffer + (my_column * panel_width)
-        top_side = 1.0 - (top_buffer + (my_row * panel_width))
-        bottom_side = top_side - panel_width
+        my_row, my_column, _ = my_fig._get_index(i)
+        my_axes = my_fig[i]
 
         show_cbar = True
         show_cbar_label = True
@@ -615,7 +592,7 @@ def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8),
             show_cbar = False
         else:
             if cbar_orientation == 'vertical':
-                show_cbar_label = True
+                # show_cbar_label = True
                 y_label = None
                 y_label_position = None
                 if my_column == 0:
@@ -661,11 +638,8 @@ def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8),
             side = "right"
         else:
             side = "left"
-                
-        single_image(panel, None, fig=fig, fontsize=fontsize,
-                     bottom_buffer=bottom_side, left_buffer=left_side, 
-                     top_buffer=(1 - bottom_side - panel_width), 
-                     right_buffer=(1 - left_side - panel_width),
+
+        single_image(panel, None, fig=my_fig, axes=my_axes, fontsize=fontsize,
                      x_range=tick_range, x_label=x_label, 
                      x_label_position=x_label_position, 
                      n_x_ticks=n_ticks, 
@@ -681,45 +655,20 @@ def multi_image(panels, output_file, n_columns=2, fig=None, figsize=(8, 8),
                      side=side,
                      **kwargs)
 
-        if 'label' in panel:
-            if cbar_orientation == 'vertical' and \
-                    (my_column == 0 or my_column == n_columns - 1):
-                if my_column == 0:
-                    panel['axes'].yaxis.set_label_position('left')
-                elif my_column == n_columns - 1:
-                    panel['axes'].yaxis.set_label_position('right')
-                panel['axes'].yaxis.labelpad = 35
-                panel['axes'].yaxis.set_label_text(panel['label'], fontsize=fontsize,
-                                                   color=text_color)
-
-            elif cbar_orientation == 'horizontal' and \
-                'log_field' in panel and \
-                panel['log_field'] == 'double' and \
-                (my_row == 0 or my_row == n_rows -1):
-                if my_row == 0:
-                    panel['axes'].xaxis.set_label_position('top')
-                elif my_row == n_rows - 1:
-                    panel['axes'].xaxis.set_label_position('bottom')
-                panel['axes'].xaxis.labelpad = 35
-                panel['axes'].xaxis.set_label_text(panel['label'], fontsize=fontsize,
-                                                   color=text_color)
-
     if fig_text is not None:
         for f_text in fig_text:
-            fig.text(f_text['x'], f_text['y'], f_text['s'], **f_text['kwargs'])
+            my_fig.text(f_text['x'], f_text['y'], f_text['s'], **f_text['kwargs'])
 
     if output_file is not None:
-        fig.savefig(output_file, bbox_inches='tight', dpi=dpi,
-                    facecolor=bg_color, edgecolor='none')
-        # fig.savefig(output_file, dpi=dpi,
-        #             facecolor=bg_color, edgecolor='none')
+        my_fig.figure.savefig(output_file, dpi=dpi,
+                              facecolor=bg_color, edgecolor='none')
         for panel in panels:
             if panel is not None:
                 if 'image' in panel: del panel['image']
                 if 'cbar' in panel: del panel['cbar']
                 if 'cax' in panel: del panel['cax']
                 if 'axes' in panel: del panel['axes']
-    return fig
+    return my_fig
 
 def particle_overlay(pdict, my_axes, proj_dim, 
                      left_side, bottom_side, panel_width, 

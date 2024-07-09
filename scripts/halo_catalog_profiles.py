@@ -27,11 +27,11 @@ import os
 import sys
 import yt
 
-from yt.extensions.astro_analysis.halo_analysis.api import \
+from yt.extensions.astro_analysis.halo_analysis import \
     add_callback, \
     add_recipe, \
     HaloCatalog
-from yt.extensions.astro_analysis.halo_analysis.halo_callbacks import \
+from yt.extensions.astro_analysis.halo_analysis.halo_catalog.halo_callbacks import \
     periodic_distance
 
 from yt.extensions.p2p import \

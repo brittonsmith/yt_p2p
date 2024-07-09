@@ -437,7 +437,7 @@ def single_image(panel, output_file, axes=None, fig=None,
                 for ticklabel in panel['cbar'].ax.get_xticklabels(): 
                     ticklabel.set_color(text_color)
                     ticklabel.set_size(fontsize)
-                ticks = panel["cbar"].ax.get_ticks()
+                ticks = panel["cbar"].ax.get_xticklabels()
                 for tick in ticks:
                     tick.set_color(text_color)
                 if log_field == 'double':
@@ -450,6 +450,7 @@ def single_image(panel, output_file, axes=None, fig=None,
                     if log_field == 'double':
                         panel['negative_cbar'].ax.set_xticklabels(
                             map(cbar_tick_formatter, negative_cbar_ticks))
+
             if log_field == 'double':
                 if 'positive_label' in panel:
                     panel['cbar'].set_label(panel['positive_label'],
@@ -462,13 +463,21 @@ def single_image(panel, output_file, axes=None, fig=None,
                 else:
                     panel['negative_cbar'].set_label('(neg)', fontsize=0.75*fontsize)
             elif show_cbar_label and 'label' in panel:
-                panel["cax"].yaxis.set_label_text(panel["label"],
-                                                  fontsize=fontsize,
-                                                  color=text_color)
-                if cbar_position == "right":
-                    panel["cax"].yaxis.set_label_coords(4.2, 0.5)
-                elif cbar_position == "left":
-                    panel["cax"].yaxis.set_label_coords(-3.2, 0.5)
+                if cbar_position in ["left", "right"]:
+                    panel["cax"].yaxis.set_label_text(panel["label"],
+                                                      fontsize=fontsize,
+                                                      color=text_color)
+                    if cbar_position == "right":
+                        panel["cax"].yaxis.set_label_coords(4.2, 0.5)
+                    elif cbar_position == "left":
+                        panel["cax"].yaxis.set_label_coords(-3.2, 0.5)
+
+                elif cbar_position in ["top", "bottom"]:
+                    panel["cax"].xaxis.set_label_text(panel["label"],
+                                                      fontsize=fontsize,
+                                                      color=text_color)
+                else:
+                    raise ValueError(f"Can't do {cbar_position=}.")
 
     if "length_bar" in panel and panel["length_bar"]:
         if "length_bar_scale" in panel:

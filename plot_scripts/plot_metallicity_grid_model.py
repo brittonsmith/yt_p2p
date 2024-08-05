@@ -60,10 +60,11 @@ if __name__ == "__main__":
 
     my_model = models.get(star_id, {})
     my_solutions = my_model.get("solutions", {})
+    my_evaluator = "evaluate_model_collapsed"
 
-    if my_tol in my_solutions:
-        solution_fn = my_solutions[my_tol]["filename"]
-        solution_value = my_solutions[my_tol]["value"]
+    if my_evaluator in my_solutions.get(my_tol, {}):
+        solution_fn = my_solutions[my_tol][my_evaluator]["filename"]
+        solution_value = my_solutions[my_tol][my_evaluator]["value"]
         print (f"Solution ({my_tol}): {solution_value} - {solution_fn}")
     else:
         solution_fn = ""

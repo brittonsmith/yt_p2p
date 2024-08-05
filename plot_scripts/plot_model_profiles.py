@@ -4,7 +4,7 @@ import numpy as np
 import os
 import yt
 
-pyplot.rcParams['font.size'] = 14
+pyplot.rcParams['font.size'] = 16
 
 from grid_figure import GridFigure
 from yt.extensions.p2p.stars import get_star_data
@@ -35,9 +35,9 @@ if __name__ == "__main__":
     xlabel = "M$_{\\rm gas, enc}$ [M$_{\\odot}$]"
 
     my_fig = GridFigure(3, 2, figsize=(11, 9),
-                    left_buffer=0.09, right_buffer=0.08,
-                    bottom_buffer=0.1, top_buffer=0.1,
-                    vertical_buffer=0, horizontal_buffer=0.12)
+                    left_buffer=0.1, right_buffer=0.09,
+                    bottom_buffer=0.08, top_buffer=0.08,
+                    vertical_buffer=0, horizontal_buffer=0.14)
 
     for my_axes in my_fig:
         my_axes.set_xscale("log")

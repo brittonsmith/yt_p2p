@@ -4,7 +4,7 @@ import numpy as np
 import os
 import yt
 
-pyplot.rcParams['font.size'] = 16
+pyplot.rcParams['font.size'] = 18
 
 from grid_figure import GridFigure
 from unyt import uvstack
@@ -41,7 +41,7 @@ if __name__ == "__main__":
 
     xlabel = "M$_{\\rm gas, enc}$ [M$_{\\odot}$]"
     my_fig = GridFigure(1, 1, figsize=(8, 5),
-                    left_buffer=0.12, right_buffer=0.03,
+                    left_buffer=0.14, right_buffer=0.03,
                     bottom_buffer=0.14, top_buffer=0.02)
 
     my_axes = my_fig[0]

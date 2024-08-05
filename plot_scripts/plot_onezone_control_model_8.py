@@ -8,7 +8,7 @@ import ytree
 
 from matplotlib.collections import LineCollection
 
-pyplot.rcParams['font.size'] = 16
+pyplot.rcParams['font.size'] = 18
 
 from grid_figure import GridFigure
 from yt.extensions.p2p.stars import get_star_data
@@ -47,7 +47,7 @@ if __name__ == "__main__":
     prog = TreeContainer(a, get_progenitor_line(my_tree))
 
     my_fig = GridFigure([0.5, 1, 0.5, 0.5, 0.5], 1, figsize=(8.5, 11),
-                    left_buffer=0.13, right_buffer=0.12,
+                    left_buffer=0.14, right_buffer=0.12,
                     bottom_buffer=0.06, top_buffer=0.06,
                     vertical_buffer=0, horizontal_buffer=0.12)
 

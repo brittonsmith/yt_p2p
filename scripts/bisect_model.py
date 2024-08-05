@@ -14,7 +14,7 @@ from yt.extensions.p2p.models import \
     create_model, \
     calculate_final_time
 
-def evaluate_model(lZ, star_id, model_data, model_parameters):
+def evaluate_model1(lZ, star_id, model_data, model_parameters):
     my_metallicity = 10**lZ
 
     filekey = f"model_lZ_{lZ:.6f}"
@@ -53,6 +53,71 @@ def evaluate_model(lZ, star_id, model_data, model_parameters):
     print ("This model remained stable.")
     return -1
 
+def evaluate_model_collapsed(lZ, star_id, model_data, model_parameters):
+    "Did the model reach Bonnor-Ebert instability?"
+    my_metallicity = 10**lZ
+
+    filekey = f"model_lZ_{lZ:.6f}"
+
+    model = create_model(model_data, model_parameters,
+                        metallicity=my_metallicity)
+    model.name = f"star_{star_id}/{filekey}"
+    model.evolve()
+    data = model.finalize_data()
+
+    gas_mass = data["gas_mass"]
+    be_mass = data["bonnor_ebert_mass"]
+
+    # ratio = (gas_mass / be_mass).max(axis=1)
+    imax = (gas_mass / be_mass[-1]).argmax()
+    ratio = gas_mass[imax] / be_mass[:, imax]
+    if ratio[-1] >= 1:
+        print ("This model collapsed.")
+        return 2
+    else:
+        return -1
+
+def evaluate_model_turnaround(lZ, star_id, model_data, model_parameters):
+    my_metallicity = 10**lZ
+
+    filekey = f"model_lZ_{lZ:.6f}"
+
+    model = create_model(model_data, model_parameters,
+                        metallicity=my_metallicity)
+    model.name = f"star_{star_id}/{filekey}"
+    model.evolve()
+    data = model.finalize_data()
+
+    gas_mass = data["gas_mass"]
+    be_mass = data["bonnor_ebert_mass"]
+
+    # ratio = (gas_mass / be_mass).max(axis=1)
+    imax = (gas_mass / be_mass[-1]).argmax()
+    ratio = gas_mass[imax] / be_mass[:, imax]
+    if ratio[-1] >= 1:
+        print ("This model collapsed.")
+        return 2
+
+    time = data["time"].to("Myr")
+    t_until = time[-1] - time
+    # evaluate slope for final 10 Myr
+    my_filter = t_until < 20
+    my_x = time[my_filter]
+    my_y = np.log10(ratio[my_filter])
+
+    fit = linregress(my_x, my_y)
+    if fit.slope > 0.0:
+        print ("This model achieved critical slope.")
+        return 2
+
+    print ("This model remained stable.")
+    return -1
+
+evaluators = {
+    "evaluate_model1": evaluate_model1,
+    "evaluate_model_collapsed": evaluate_model_collapsed,
+    "evaluate_model_turnaround": evaluate_model_turnaround,
+}
 
 if __name__ == "__main__":
     star_ids = [
@@ -83,6 +148,7 @@ if __name__ == "__main__":
     ensure_dir(base_output_dir)
 
     tolerance = 1e-3
+    my_evaluator = "evaluate_model_turnaround"
 
     for star_id in star_ids:
         if os.path.exists(models_fn):
@@ -102,7 +168,7 @@ if __name__ == "__main__":
         my_solutions = my_model["solutions"]
 
         my_tol = f"{tolerance:g}"
-        if my_tol in my_solutions:
+        if my_tol in my_solutions and my_evaluator in my_solutions[my_tol]:
             continue
 
         output_dir = os.path.join(base_output_dir, f"star_{star_id}")
@@ -116,8 +182,14 @@ if __name__ == "__main__":
                              model_data, model_parameters)
         model_parameters["final_time"] = models[star_id]["final_time"]
 
-        my_root = bisect(evaluate_model, -5, -3, xtol=tolerance,
-                         args=(star_id, model_data, model_parameters))
+        try:
+            my_root = bisect(
+                evaluators[my_evaluator], -5, -3, xtol=tolerance,
+                args=(star_id, model_data, model_parameters))
+        except ValueError as e:
+            print (e)
+            print ("No solution found!")
+            continue
 
         my_metallicity=10**my_root
         filekey = f"model_lZ_{my_root:.6f}"
@@ -129,7 +201,10 @@ if __name__ == "__main__":
         model.evolve()
         model.save_as_dataset(filename=filename)
 
-        my_solutions[my_tol] = {"filename": filename, "value": my_root}
+        if my_tol not in my_solutions:
+            my_solutions[my_tol] = {}
+        my_solutions[my_tol][my_evaluator] = \
+          {"filename": filename, "value": my_root}
 
         with open(models_fn, mode="w") as f:
             yaml.dump(models, stream=f)

@@ -72,6 +72,8 @@ if __name__ == "__main__":
                  label="data")
     my_axes.plot(model_time, model_data["data", "density"], color=mcolor,
                  label="model")
+    my_axes.plot(ed_time, ed_data["data", "matter_density"], color=ecolor,
+                 linestyle=":")
 
     my_axes = my_fig[1]
     my_axes.plot(model_time, model_data["data", "temperature"], color=mcolor)

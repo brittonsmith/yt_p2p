@@ -1,10 +1,15 @@
 from collections import defaultdict
+import glob
 import numpy as np
+import os
 import sys
 import yt
 
 if __name__ == "__main__":
-    fns = [line.strip() for line in open('pfs.dat', 'r').readlines()]
+    if os.path.exists("pfs.dat"):
+        fns = [line.strip() for line in open('pfs.dat', 'r').readlines()]
+    else:
+        fns = sorted(glob.glob("DD????/DD????"))
 
     parameters = ['RefineRegionLeftEdge',
                   'RefineRegionRightEdge']

@@ -1,15 +1,21 @@
 import gc
 import numpy as np
 import os
+import sys
 import yt
 yt.enable_parallelism()
 
 from yt.funcs import ensure_dir
-from yt.extensions.p2p import add_p2p_fields
-from yt.extensions.p2p.misc import reunit
+from yt_p2p import add_p2p_fields
+from yt_p2p.misc import reunit
 
 if __name__ == "__main__":
-    es = yt.load("simulation.h5")
+    if len(sys.argv) > 1:
+        data_dir = sys.argv[1]
+    else:
+        data_dir = "."
+
+    es = yt.load(os.path.join(data_dir, "simulation.h5"))
     fns = es.data["filename"].astype(str)
     rleft = es.data["RefineRegionLeftEdge"]
     rright = es.data["RefineRegionRightEdge"]
@@ -17,7 +23,6 @@ if __name__ == "__main__":
     center = es.arr([0.5]*3, "unitary")
     width = es.quan(0.15, "unitary")
 
-    data_dir = "/disk14/brs/pop2-prime/firstpop2_L2-Seed3_large/cc_512_no_dust_continue"
     output_dir = "projections"
     ensure_dir(output_dir)
 

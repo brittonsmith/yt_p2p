@@ -241,7 +241,7 @@ def single_image(panel, output_file, axes=None, fig=None,
             panel['range'][0] = image_min
         if panel['range'][1] == 'max':
             image_max = proj_data.max()
-            panel['range'][1] = float(image_max)
+            panel['range'][1] = image_max
         else:
             image_max = panel['range'][1]
         if panel["range"][0] > panel["range"][1]:
@@ -255,7 +255,9 @@ def single_image(panel, output_file, axes=None, fig=None,
             panel["range"][1] = min(panel["ceiling"], panel["range"][1])
             image_max = panel["range"][1]
 
-        panel["image_max"] = float(image_max)
+        if hasattr(proj_data, "units") and not hasattr(image_max, "units"):
+            image_max *= proj_data.units
+        panel["image_max"] = image_max
 
         if log_field == 'double':
             if panel['negative_range'] is None:
@@ -313,7 +315,9 @@ def single_image(panel, output_file, axes=None, fig=None,
         else:
             clip = True
 
-        if clip: proj_data = proj_data.clip(image_min, image_max)
+        if clip:
+            proj_data.clip(min=image_min, out=proj_data)
+            proj_data.clip(max=image_max, out=proj_data)
 
         if log_field:
             mynorm = colors.LogNorm(image_min, image_max)
@@ -358,7 +362,7 @@ def single_image(panel, output_file, axes=None, fig=None,
                 tick_min = np.ceil(np.log10(panel['range'][0]))
                 tick_max = np.floor(np.log10(panel['range'][1])) + 1
                 tick_step = max(1, np.ceil((tick_max - tick_min) /
-                                           np.float(cbar_max_ticks)))
+                                           float(cbar_max_ticks)))
                 cbar_ticks = 10**np.arange(tick_min, tick_max, tick_step)
                 if cbar_ticks.size == 0:
                     cbar_ticks = np.array(panel["range"])
@@ -378,7 +382,7 @@ def single_image(panel, output_file, axes=None, fig=None,
                 tick_min = np.ceil(np.log10(-panel['negative_range'][1]))
                 tick_max = np.floor(np.log10(-panel['negative_range'][0])) + 1
                 tick_step = max(1, np.ceil((tick_max - tick_min) /
-                                           np.float(cbar_max_ticks)))
+                                           float(cbar_max_ticks)))
                 negative_cbar_ticks = 10**np.arange(tick_min, tick_max, tick_step)
 
                 if (negative_image_min / negative_image_max) < 10.0:
@@ -570,7 +574,7 @@ def multi_image(panels, output_file, n_columns=2, figsize=(8, None),
                 bg_color="white", text_color="black", timeline=None,
                 **kwargs):
 
-    n_rows = np.int(np.ceil(len(panels) / n_columns))
+    n_rows = int(np.ceil(len(panels) / n_columns))
 
     my_fig = GridFigure(
         n_rows, n_columns, figsize=figsize, square=True,

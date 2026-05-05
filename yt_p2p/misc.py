@@ -3,9 +3,6 @@ import yt
 from yt_astro_analysis.halo_analysis.halo_catalog.halo_callbacks import \
     periodic_distance
 
-from yt.utilities.exceptions import \
-    YTSphereTooSmall
-
 def dirname(path, up=0):
     return "/".join(path.split('/')[:-up-1])
 
@@ -23,12 +20,8 @@ def iterate_center_of_mass(sphere, inner_radius, stepsize=0.05,
     yield sphere
     while (sphere.radius > inner_radius):
         com = sphere.quantities.center_of_mass(**com_kwargs)
-        try:
-            sphere = sphere.ds.sphere(com, (1-stepsize) * sphere.radius)
-            yield sphere
-        except YTSphereTooSmall:
-            yield None
-            break
+        sphere = sphere.ds.sphere(com, (1-stepsize) * sphere.radius)
+        yield sphere
 
 def sphere_icom(sphere, inner_radius, stepsize=0.1,
                 com_kwargs=None, verbose=True):

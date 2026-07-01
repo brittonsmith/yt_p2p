@@ -45,8 +45,9 @@ def _get_node_time_index(node, etimes, offset=0):
     the ancestor has a duplicate index with its ancestor.
     """
     ifn = np.abs(etimes - node["time"]).argmin()
-    ancs = list(node.ancestors)
-    if not ancs:
+
+    progs = list(node["prog"])
+    if len(progs) < 3:
         return ifn + offset
 
     iancs = []
